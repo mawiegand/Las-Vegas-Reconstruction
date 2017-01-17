@@ -330,7 +330,7 @@ struct KinFuApp
         {
 			mesh_viz = thread(&KinFuApp::show_mesh,this);
 		}
-        for (int i = 0; !exit_ && !viz.wasStopped(); ++i)
+        while (!exit_ && !viz.wasStopped())
         {
 			if((!pause_ || !capture_.isRecord()) && !(kinfu.hasShifted() && kinfu.isLastScan()))
             {
