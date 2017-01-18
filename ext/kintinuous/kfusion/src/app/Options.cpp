@@ -65,9 +65,9 @@ Options::Options(int argc, char** argv) : m_descr("Supported options")
 	store(command_line_parser(argc, argv).options(m_descr).positional(m_pdescr).run(), m_variables);
 	notify(m_variables);
 
-  if(m_variables.count("help")) {
+  /*if(m_variables.count("help")) {
     ::std::cout<< m_descr << ::std::endl;
-  }
+  }*/
 
 }
 
