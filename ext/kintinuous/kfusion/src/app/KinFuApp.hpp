@@ -349,58 +349,58 @@ struct KinFuApp
 					SampledScopeTime fps(time_ms); (void)fps;
 					has_image = kinfu(depth_device_);
 				}
-			}
 
-			if ((!pause_ || !capture_.isRecord()) && !(kinfu.hasShifted() && kinfu.isLastScan()) && has_image)
-			{
-				//biggest rvec difference -> new pic
-				//
-				double ref_timer = cv::getTickCount();
-				double time = abs((timer_start_ - ref_timer))/ cv::getTickFrequency();
-
-				if(rvecs.size()<1){
-					image.copyTo(image_copy);
-
-					//buffer of all imgposes
-					rvecs.push_back(cv::Mat(kinfu.getCameraPose().rvec()));
-					posen.push_back(kinfu.getCameraPose());
-
-					//storePicPose(kinfu, image_copy);
-					//extractImage(kinfu, image_copy);
-				}
-				else
+				if (has_image)
 				{
-					float dist = 0.0;
-					cv::Mat mom_rvec(kinfu.getCameraPose().rvec());
-					for(size_t z=0;z<rvecs.size();z++){
-						dist += norm(mom_rvec-rvecs[z]);
+					//biggest rvec difference -> new pic
+					//
+					double ref_timer = cv::getTickCount();
+					double time = abs((timer_start_ - ref_timer))/ cv::getTickFrequency();
+
+					if(rvecs.size()<1){
+						image.copyTo(image_copy);
+
+						//buffer of all imgposes
+						rvecs.push_back(cv::Mat(kinfu.getCameraPose().rvec()));
+						posen.push_back(kinfu.getCameraPose());
+
+						//storePicPose(kinfu, image_copy);
+						//extractImage(kinfu, image_copy);
 					}
-					if(dist > best_dist){
-						best_dist = dist;
-						//mom_rvec.copyTo(best_rvec);
-						//image.copyTo(best_image);
-						best_rvec = mom_rvec.clone();
-						best_image = image.clone();
-						best_pose = kinfu.getCameraPose();
-						//std::cout << "better image found, sum rvec distances: " << best_dist << std::endl;
-					}
-					//if(time - 3.0 > 0)
-					if(kinfu.params().cmd_options->textures() && frame_count==7)
+					else
 					{
+						float dist = 0.0;
+						cv::Mat mom_rvec(kinfu.getCameraPose().rvec());
+						for(size_t z=0;z<rvecs.size();z++){
+							dist += norm(mom_rvec-rvecs[z]);
+						}
+						if(dist > best_dist){
+							best_dist = dist;
+							//mom_rvec.copyTo(best_rvec);
+							//image.copyTo(best_image);
+							best_rvec = mom_rvec.clone();
+							best_image = image.clone();
+							best_pose = kinfu.getCameraPose();
+							//std::cout << "better image found, sum rvec distances: " << best_dist << std::endl;
+						}
+						//if(time - 3.0 > 0)
+						if(kinfu.params().cmd_options->textures() && frame_count==7)
+						{
 
-						rvecs.push_back(best_rvec);
-						posen.push_back(best_pose);
+							rvecs.push_back(best_rvec);
+							posen.push_back(best_pose);
 
-						storePicPose(kinfu, best_pose, best_image);
-						//extractImage(kinfu, best_image);
-						sample_poses_.push_back(kinfu_->getCameraPose());
-						viz.showWidget("path", cv::viz::WTrajectory(sample_poses_));
-						std::cout << "image taken "<< image_count++ << ", time: "<< time << std::endl;
-						timer_start_ = ref_timer;
+							storePicPose(kinfu, best_pose, best_image);
+							//extractImage(kinfu, best_image);
+							sample_poses_.push_back(kinfu_->getCameraPose());
+							viz.showWidget("path", cv::viz::WTrajectory(sample_poses_));
+							std::cout << "image taken "<< image_count++ << ", time: "<< time << std::endl;
+							timer_start_ = ref_timer;
 
+						}
 					}
+					show_raycasted(kinfu);
 				}
-				show_raycasted(kinfu);
 			}
 
 			if(meshRender_)
