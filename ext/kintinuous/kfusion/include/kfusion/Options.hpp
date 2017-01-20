@@ -149,10 +149,15 @@ public:
 	 */
 	int getDepth() const;
 
-    /**
-     * @brief   Returns the fusion threshold for tesselation
-     */
-    float getLineFusionThreshold() const;
+	/**
+	 * @brief   Returns the fusion threshold for tesselation
+	 */
+	float getLineFusionThreshold() const;
+
+	/**
+	 * @brief Returns true if reloaded pipeline is disabled
+	 */
+	bool noReloadedPipeline() const;
 
 
 private:
@@ -164,6 +169,7 @@ private:
     bool 							m_no_viz;
     float 							m_cam_offset;
     float							m_shifting_distance;
+    bool							m_no_reloaded_pipeline;
 	/// The number of uesed threads
 	int				                m_numThreads;
 
@@ -271,6 +277,10 @@ inline ostream& operator<<(ostream& os, const Options &o)
 	{
 	    cout << "##### Recursion depth \t\t\t: " << o.getDepth() << endl;
 	}
+	if(o.noReloadedPipeline())
+		cout << "##### Reloaded Pipeline \t\t: NO"  << endl;
+	else
+		cout << "##### Reloaded Pipeline \t\t: YES"  << endl;
 	if(o.verbose())
 	{
 		cout << "##### Verbose output \t\t\t: YES" << endl;
