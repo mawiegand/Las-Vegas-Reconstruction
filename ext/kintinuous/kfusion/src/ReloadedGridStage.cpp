@@ -39,7 +39,8 @@
 #include <kfusion/ReloadedGridStage.hpp>
 
 // default constructor
-ReloadedGridStage::ReloadedGridStage(double voxel_size, Options* options) : AbstractStage()
+ReloadedGridStage::ReloadedGridStage(double voxel_size, Options* options) : AbstractStage(),
+									    options_(options)
 {
 	slice_count_ = 0;
 	voxel_size_  = voxel_size;
@@ -73,9 +74,24 @@ void ReloadedGridStage::step()
 
 	// TODO: if maximum global grid size reached add global grid to outQueue
 	//getOutQueue()->Add(pair<pair<GGrid*, bool>, vector<ImgPose*> >(pair<GGrid*, bool>(global_tsdf_, last_shift), slice_work.first.imgposes_));
+
+	// Create Mesh after last shift
 	if(last_shift) {
-		global_tsdf_->saveGrid("global_tsdf.grid");
 		done(true);
 	}
 }
-void ReloadedGridStage::lastStep()	{ /* omit */ };
+void ReloadedGridStage::lastStep() {
+	//global_tsdf_->saveGrid("global_tsdf.grid");
+
+	// create mesh
+	MeshPtr meshPtr = new HMesh();
+	cFastReconstruction* fast_recon =  new cFastReconstruction(global_tsdf_);
+	fast_recon->getMesh(*meshPtr);
+	std::cout << "Global amount of vertices: " << meshPtr->meshSize() << std::endl;
+	std::cout << "Global amount of faces: " << meshPtr->getFaces().size() << std::endl;
+	meshPtr->finalize();
+	ModelPtr m(new Model(meshPtr->meshBuffer()));
+
+	// save mesh
+	ModelFactory::saveModel(m, string(options_->getOutput() + ".ply"));
+};

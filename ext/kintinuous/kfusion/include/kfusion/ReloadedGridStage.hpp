@@ -80,9 +80,10 @@ public:
 	void lastStep();
 
 private:
+	double voxel_size_;
+	Options* options_;
 	size_t slice_count_;
 	BoundingBox<cVertex> bbox_;
-	double voxel_size_;
 	bool last_shift;
 	GGrid* global_tsdf_;
 };
