@@ -67,7 +67,7 @@ namespace kfusion
 			);
 		} else {
 			pl_.AddStage(
-					boost::shared_ptr<GridStage>(new GridStage((double)(params.volume_size[0] / params.volume_dims[0]), params.cmd_options))
+					boost::shared_ptr<ReloadedGridStage>(new ReloadedGridStage((double)(params.volume_size[0] / params.volume_dims[0]), params.cmd_options))
 			);
 		}
 

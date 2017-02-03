@@ -16,6 +16,7 @@
 #include <kfusion/cuda/projective_icp.hpp>
 #include <kfusion/LinearPipeline.hpp>
 #include <kfusion/GridStage.hpp>
+#include <kfusion/ReloadedGridStage.hpp>
 #include <kfusion/MeshStage.hpp>
 #include <kfusion/OptimizeStage.hpp>
 #include <kfusion/FusionStage.hpp>
