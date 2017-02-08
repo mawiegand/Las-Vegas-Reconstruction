@@ -68,7 +68,7 @@ void ReloadedGridStage::step()
 	string grid_notice = ("#### A:    Reloaded Grid Stage " +  to_string(slice_count_) + "    ####");
 
 	ScopeTime* grid_time = new ScopeTime(grid_notice.c_str());
-	global_tsdf_->addData(bbox_, tsdf_ptr, tsdf_values.cols, offset[0], offset[1], offset[2], back_offset[0], back_offset[1], back_offset[2]);
+	global_tsdf_->addSliceData(tsdf_ptr, tsdf_values.cols);
 	delete grid_time;
 	slice_count_++;
 
