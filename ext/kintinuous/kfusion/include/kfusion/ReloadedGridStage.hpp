@@ -60,31 +60,32 @@ using namespace lvr;
 using namespace kfusion;
 using namespace std;
 
-typedef Vertex<float>  fVertex;
+typedef Vertex<float> fVertex;
 typedef ColorVertex<float, unsigned char> cVertex;
 typedef FastKinFuBox<ColorVertex<float, unsigned char>, lvr::Normal<float> > cFastBox;
 typedef GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point> GGrid;
-typedef FastReconstruction<ColorVertex<float, unsigned char>, lvr::Normal<float>, cFastBox > cFastReconstruction;
+typedef FastReconstruction<ColorVertex<float, unsigned char>, lvr::Normal<float>, cFastBox> cFastReconstruction;
 typedef HalfEdgeKinFuMesh<cVertex, lvr::Normal<float> > HMesh;
-typedef HMesh* MeshPtr;
+typedef HMesh *MeshPtr;
 
 class ReloadedGridStage : public AbstractStage
 {
 public:
 
-	// default constructor
-	ReloadedGridStage(double voxel_size = 3.0/512.0, Options* options = NULL);
+    // default constructor
+    ReloadedGridStage(double voxel_size = 3.0 / 512.0, Options *options = NULL);
 
-	void firstStep();
-	void step();
-	void lastStep();
+    void firstStep();
+    void step();
+    void lastStep();
 
 private:
-	double voxel_size_;
-	Options* options_;
-	size_t slice_count_;
-	BoundingBox<cVertex> bbox_;
-	bool last_shift;
-	GGrid* global_tsdf_;
+    double voxel_size_;
+    Options *options_;
+    size_t slice_count_;
+    BoundingBox<cVertex> bbox_;
+    bool last_shift;
+    GGrid *global_tsdf_;
 };
+
 #endif // STAGE
