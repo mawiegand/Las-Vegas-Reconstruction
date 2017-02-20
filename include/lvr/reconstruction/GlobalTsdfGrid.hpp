@@ -19,7 +19,7 @@ namespace lvr
 		// Typedef to alias iterators for box maps
 		typedef typename unordered_map<size_t, BoxT*>::iterator box_map_it;
 
-		GlobalTsdfGrittd(float cellSize,  BoundingBox<VertexT> bb, bool isVoxelsize);
+		GlobalTsdfGrid(float cellSize,  BoundingBox<VertexT> bb, bool isVoxelsize);
 		void getData(BoundingBox<VertexT> bb);
 		bool addSliceData(TsdfT* tsdf, size_t size);
 		virtual void addLatticePoint(int index_x, int index_y, int index_z, float distance = 0);
