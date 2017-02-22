@@ -17,10 +17,46 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::getData(BoundingBox<VertexT> bb)
+    TsdfT* GlobalTsdfGrid<VertexT, BoxT, TsdfT>::getData(BoundingBox<VertexT> bb)
     {
         std::cout << "get data from global TSDF" << std::endl;
-        return;
+
+        int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
+        int center_of_bb_y = (this->m_boundingBox.getYSize() / 2) / this->m_voxelsize;
+        int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
+
+        VertexT bbMin = bb.getMin();
+        VertexT bbMax = bb.getMin();
+
+        // calculate tsdf size
+        size_t tsdfSize = (bbMax.x - bbMin.x) * (bbMax.y - bbMin.y) * (bbMax.z - bbMin.z);
+        TsdfT tsdf[tsdfSize];
+
+        size_t tsdfIndex = 0;
+        // for each value in bounding box
+        // TODO: determine required order by cyclical buffer
+        for (int x = bbMin.x; x < bbMax.x; x++)
+        {
+            for (int y = bbMin.y; y < bbMax.y; y++)
+            {
+                for (int z = bbMin.z; z < bbMax.z; z++)
+                {
+                    // calculate hash value
+                    size_t hash_value = this->hashValue(x, y, z);
+                    // TODO: catch index out of bounce
+                    int grid_index = this->m_qpIndices[hash_value];
+                    QueryPoint<VertexT> qp = this->m_queryPoints[grid_index];
+                    VertexT position = qp.m_position;
+                    tsdf[tsdfIndex].x = position.x - center_of_bb_x;
+                    tsdf[tsdfIndex].y = position.y - center_of_bb_y;
+                    tsdf[tsdfIndex].z = position.z - center_of_bb_z;
+                    tsdf[tsdfIndex].w = qp.m_distance;
+                    tsdfIndex++;
+                }
+            }
+        }
+
+        return &tsdf;
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
