@@ -62,8 +62,8 @@ struct KinFuApp
 		}
 	}
 	KinFuApp(OpenNISource& source, Options* options) :
-			exit_ (false),  iteractive_mode_(false), pause_(false), meshRender_(false), no_viz_(options->noVizualisation()),
-			capture_ (source), cube_count_(0), pic_count_(0), mesh_(NULL), garbageMesh_(NULL)
+			exit_ (false),  iteractive_mode_(false), pause_(false), no_viz_(options->noVizualisation()),
+			capture_ (source), cube_count_(0), pic_count_(0)
 	{
 		KinFuParams params = KinFuParams::default_params();
 		params.shifting_distance = options->getShiftingDistance();
@@ -112,111 +112,6 @@ struct KinFuApp
 		set_interactive();
 		sample_poses_.push_back(kinfu_->getCameraPose());
 		viz.showWidget("path", cv::viz::WTrajectory(sample_poses_));
-	}
-
-	void show_mesh()
-	{
-		unordered_map<VertexPtr, size_t> index_map;
-		size_t verts_size = 0;
-		size_t faces_size = 0;
-		while(true)
-		{
-			auto lvr_mesh = kinfu_->cyclical().getMesh();
-			size_t slice_size = lvr_mesh->getVertices().size() - verts_size;
-			size_t slice_face_size = lvr_mesh->getFaces().size() - faces_size;
-			cv::viz::Mesh* cv_mesh;
-			//fill cloud
-			cv::Mat verts;
-			cv::Vec3f *ddata;
-			if(mesh_ == NULL)
-			{
-				cv_mesh = new cv::viz::Mesh();
-				cv_mesh->cloud.create(1, slice_size, CV_32FC3);
-				ddata = cv_mesh->cloud.ptr<cv::Vec3f>();
-			}
-			else
-			{
-				verts.create(1, slice_size, CV_32FC3);
-				ddata = verts.ptr<cv::Vec3f>();
-			}
-
-			for(size_t k = 0; k < slice_size; k++)
-			{
-				auto vertex = lvr_mesh->getVertices()[k + verts_size];
-				index_map[vertex] = k + verts_size;
-				*ddata++ = cv::Vec3f(vertex->m_position[0], vertex->m_position[1], vertex->m_position[2]);
-			}
-			if(mesh_ != NULL)
-				cv::hconcat(mesh_->cloud, verts, mesh_->cloud);
-			//fill polygons
-			cv::Mat faces;
-			int* poly_ptr;
-			if(mesh_ == NULL)
-			{
-				cv_mesh->polygons.create(1, lvr_mesh->getFaces().size() * 4, CV_32SC1);
-				poly_ptr = cv_mesh->polygons.ptr<int>();
-			}
-			else
-			{
-				faces.create(1, slice_face_size * 4, CV_32SC1);
-				poly_ptr = faces.ptr<int>();
-			}
-			for(size_t k = 0; k < slice_face_size; k++)
-			{
-				auto face = lvr_mesh->getFaces()[k + faces_size];
-				*poly_ptr++ = 3;
-				*poly_ptr++ = index_map[face->m_edge->end()];
-				*poly_ptr++ = index_map[face->m_edge->next()->end()];
-				*poly_ptr++ = index_map[face->m_edge->next()->next()->end()];
-			}
-			if(mesh_ != NULL)
-				cv::hconcat(mesh_->polygons, faces, mesh_->polygons);
-
-			//fill color
-			cv::Mat colors;
-			cv::Mat buffer;
-			cv::Vec3d *cptr;
-			size_t size;
-			//auto cBuffer = lvr_mesh->meshBuffer()->getVertexColorArray(size);
-			auto fused_map = lvr_mesh->m_fused_verts;
-			//cout << "slcie size " << slice_size << endl;
-			//cout << "color size " << size << endl;
-			if(mesh_ == NULL)
-			{
-				cv_mesh->colors.create(1, slice_size, CV_64FC(3));
-				cptr = cv_mesh->colors.ptr<cv::Vec3d>();
-			}
-			else
-			{
-				buffer.create(1, slice_size, CV_64FC(3));
-				cptr = buffer.ptr<cv::Vec3d>();
-				//buffer.convertTo(colors, CV_8U, 255.0);
-
-			}
-			for(size_t i = 0; i < slice_size; ++i)
-			{
-				if(lvr_mesh->getVertices()[i + verts_size]->m_fused && !lvr_mesh->getVertices()[i + verts_size]->m_fusedNeighbor)
-					*cptr++ = cv::Vec3d(0.0, 0.0, 255.0);
-				else if(lvr_mesh->getVertices()[i + verts_size]->m_fusedNeighbor)
-					*cptr++ = cv::Vec3d(255.0, 0.0, 0.0);
-				else
-					*cptr++ = cv::Vec3d(0.0, 255.0, 0.0);
-			}
-			//*cptr++ = cv::Vec3d(3 * cBuffer[fused_map[i]], 3 * cBuffer[fused_map[i] + 1], 3 * cBuffer[fused_map[i] + 2]);
-			if(mesh_ != NULL)
-			{
-				buffer.convertTo(buffer, CV_8U, 255.0);
-				cv::hconcat(mesh_->colors, buffer, mesh_->colors);
-			}
-			else
-			{
-				cv_mesh->colors.convertTo(cv_mesh->colors, CV_8U, 255.0);
-				mesh_ = cv_mesh;
-			}
-			verts_size = lvr_mesh->getVertices().size();
-			faces_size = lvr_mesh->getFaces().size();
-			meshRender_ = true;
-		}
 	}
 
 	void checkForShift()
@@ -317,7 +212,6 @@ struct KinFuApp
 		cv::Mat depth, image, image_copy;
 		double time_ms = 0;
 		int has_image = 0;
-		std::thread mesh_viz;
 
 		std::vector<Affine3f> posen;
 		std::vector<cv::Mat> rvecs;
@@ -326,10 +220,6 @@ struct KinFuApp
 		cv::Mat best_rvec,best_image;
 		float best_dist=0.0;
 
-		if(!no_viz_)
-		{
-			mesh_viz = thread(&KinFuApp::show_mesh,this);
-		}
 		while (!exit_ && !viz.wasStopped())
 		{
 			if((!pause_ || !capture_.isRecord()) && !(kinfu.hasShifted() && kinfu.isLastScan()))
@@ -403,18 +293,6 @@ struct KinFuApp
 				}
 			}
 
-			if(meshRender_)
-			{
-				if(garbageMesh_ != NULL)
-				{
-					viz.removeWidget("mesh");
-					//delete garbageMesh_;
-				}
-				viz.showWidget("mesh", cv::viz::WMesh(*mesh_));
-				garbageMesh_ = mesh_;
-				meshRender_ = false;
-			}
-
 			if(kinfu.hasShifted())
 				show_cube(kinfu);
 
@@ -451,13 +329,11 @@ struct KinFuApp
 
 	unsigned int image_count=0;
 	unsigned int frame_count=0;
-	bool exit_, iteractive_mode_, pause_, meshRender_, no_viz_;
+	bool exit_, iteractive_mode_, pause_, no_viz_;
 	OpenNISource& capture_;
 	KinFu::Ptr kinfu_;
 	vector<Affine3f> sample_poses_;
 	cv::viz::Viz3d viz;
-	cv::viz::Mesh* mesh_;
-	cv::viz::Mesh* garbageMesh_;
 	size_t cube_count_, pic_count_;
 	double timer_start_;
 	cv::Mat view_host_;
