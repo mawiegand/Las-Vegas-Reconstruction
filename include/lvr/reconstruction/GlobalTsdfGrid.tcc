@@ -7,8 +7,19 @@
 
 #include "GlobalTsdfGrid.hpp"
 
+#include <lvr/geometry/ColorVertex.hpp>
+#include <lvr/reconstruction/FastKinFuBox.hpp>
+#include <lvr/reconstruction/FastReconstruction.hpp>
+#include <lvr/geometry/HalfEdgeKinFuMesh.hpp>
+
 namespace lvr
 {
+    typedef ColorVertex<float, unsigned char> cVertex;
+    typedef FastKinFuBox<ColorVertex<float, unsigned char>, lvr::Normal<float> > cFastBox;
+    typedef FastReconstruction<ColorVertex<float, unsigned char>, lvr::Normal<float>, cFastBox> cFastReconstruction;
+    typedef HalfEdgeKinFuMesh<cVertex, lvr::Normal<float> > HMesh;
+    typedef HMesh *MeshPtr;
+
     template<typename VertexT, typename BoxT, typename TsdfT>
     GlobalTsdfGrid<VertexT, BoxT, TsdfT>::GlobalTsdfGrid(float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize) :
             HashGrid<VertexT, BoxT>(cellSize, bb, isVoxelsize)

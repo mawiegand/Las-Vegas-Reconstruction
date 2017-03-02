@@ -47,15 +47,21 @@
 
 #include <kfusion/cuda/tsdf_volume.hpp>
 #include <kfusion/tsdf_buffer.h>
-#include <kfusion/LVRPipeline.hpp>
 #include <Eigen/Core>
-#include "types.hpp"
 #include <cuda_runtime.h>
 #include <thread>
+#include <kfusion/types.hpp>
+#include <lvr/geometry/ColorVertex.hpp>
+#include <lvr/geometry/BoundingBox.hpp>
+#include <lvr/reconstruction/FastKinFuBox.hpp>
 #include <lvr/reconstruction/GlobalTsdfGrid.hpp>
 
 namespace kfusion
 {
+    typedef lvr::ColorVertex<float, unsigned char> cVertex;
+    typedef lvr::FastKinFuBox<lvr::ColorVertex<float, unsigned char>, lvr::Normal<float> > cFastBox;
+    typedef lvr::GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point> GGrid;
+
     namespace cuda
     {
 		/** \brief CyclicalBuffer implements a cyclical TSDF buffer.
@@ -87,10 +93,10 @@ namespace kfusion
 
 				//params.cmd_options
 				double voxel_size = (double)(params.volume_size[0] / params.volume_dims[0]);
-				BoundingBox<cVertex> bbox_ = BoundingBox<cVertex>(0.0, 0.0, 0.0, 300.0, 300.0, 300.0);
+				lvr::BoundingBox<cVertex> bbox_ = lvr::BoundingBox<cVertex>(0.0, 0.0, 0.0, 300.0, 300.0, 300.0);
 				bbox_.expand(300.0, 300.0, 300.0);
 				//timestamp.setQuiet(!options->verbose());
-				global_tsdf_ = new GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point>(voxel_size, bbox_, true);
+				global_tsdf_ = new GGrid(voxel_size, bbox_, true);
 			}
 
 
@@ -261,7 +267,7 @@ namespace kfusion
 
 		  //MaCuWrapper mcwrap_;
             Options *options_;
-            GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point> *global_tsdf_;
+            GGrid *global_tsdf_;
 
 			inline int calcIndex(float f) const
 			{

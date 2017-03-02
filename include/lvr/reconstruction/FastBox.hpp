@@ -29,6 +29,7 @@
 
 #include <lvr/geometry/Vertex.hpp>
 #include <lvr/geometry/Normal.hpp>
+#include <lvr/geometry/BaseMesh.hpp>
 
 #include "QueryPoint.hpp"
 #include "MCTable.hpp"
