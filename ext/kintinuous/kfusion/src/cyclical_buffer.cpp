@@ -149,19 +149,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 	}
     if (last_shift)
     {
-        //global_tsdf_->saveGrid("global_tsdf.grid");
-
-        // create mesh
-        MeshPtr meshPtr = new HMesh();
-        cFastReconstruction *fast_recon = new cFastReconstruction(global_tsdf_);
-        fast_recon->getMesh(*meshPtr);
-        std::cout << "Global amount of vertices: " << meshPtr->meshSize() << std::endl;
-        std::cout << "Global amount of faces: " << meshPtr->getFaces().size() << std::endl;
-        meshPtr->finalize();
-        ModelPtr m(new Model(meshPtr->meshBuffer()));
-
-        // save mesh
-        ModelFactory::saveModel(m, string(options_->getOutput() + ".ply"));
+        global_tsdf_->saveMesh(options_->getOutput());
     }
 
 

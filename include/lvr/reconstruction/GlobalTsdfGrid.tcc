@@ -186,6 +186,24 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename)
+    {
+        //global_tsdf_->saveGrid("global_tsdf.grid");
+
+        // create mesh
+        MeshPtr meshPtr = new HMesh();
+        cFastReconstruction *fast_recon = new cFastReconstruction(this);
+        fast_recon->getMesh(*meshPtr);
+        std::cout << "Global amount of vertices: " << meshPtr->meshSize() << std::endl;
+        std::cout << "Global amount of faces: " << meshPtr->getFaces().size() << std::endl;
+        meshPtr->finalize();
+        ModelPtr m(new Model(meshPtr->meshBuffer()));
+
+        // save mesh
+        ModelFactory::saveModel(m, filename + ".ply");
+    }
+
+    template<typename VertexT, typename BoxT, typename TsdfT>
     GlobalTsdfGrid<VertexT, BoxT, TsdfT>::~GlobalTsdfGrid()
     {
 

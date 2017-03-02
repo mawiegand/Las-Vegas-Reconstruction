@@ -23,6 +23,7 @@ namespace lvr
         TsdfT* getData(BoundingBox<VertexT> bb);
         bool addSliceData(TsdfT *tsdf, size_t size);
         virtual void addLatticePoint(int index_x, int index_y, int index_z, float distance = 0);
+        void saveMesh(string filename);
         ~GlobalTsdfGrid();
     };
 }
