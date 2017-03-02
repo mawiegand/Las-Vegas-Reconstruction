@@ -125,15 +125,17 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 					fusionBackShift[i] += maxBounds[i];
 				}
 			}
-			TSDFSlice slice;
-			slice.tsdf_values_ = cloud_slice_;
-			slice.offset_ = fusionShift;
-			slice.back_offset_ = fusionBackShift;
-			slice.imgposes_ = imgPoses_;
-			pl_.addTSDFSlice(slice, last_shift);
-			slice_count_++;
+
+            // print grid notice
+            string grid_notice = ("#### A:    Reloaded Grid Integration " + to_string(slice_count_) + "    ####");
+
+            ScopeTime *grid_time = new ScopeTime(grid_notice.c_str());
+            global_tsdf_->addSliceData(tsdf_ptr, cloud_slice_.cols);
+            delete grid_time;
+            slice_count_++;
 		}
 	}
+
 	if(!last_shift)
 	{
 		// clear buffer slice and update the world model
@@ -141,7 +143,26 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 
 		// shift buffer addresses
 		shiftOrigin (volume, offset);
+
+        // TODO: integrate existing GlobalTSDFData here
+        //volume->integrateSlice(&buffer_, offset);
 	}
+    if (last_shift)
+    {
+        //global_tsdf_->saveGrid("global_tsdf.grid");
+
+        // create mesh
+        MeshPtr meshPtr = new HMesh();
+        cFastReconstruction *fast_recon = new cFastReconstruction(global_tsdf_);
+        fast_recon->getMesh(*meshPtr);
+        std::cout << "Global amount of vertices: " << meshPtr->meshSize() << std::endl;
+        std::cout << "Global amount of faces: " << meshPtr->getFaces().size() << std::endl;
+        meshPtr->finalize();
+        ModelPtr m(new Model(meshPtr->meshBuffer()));
+
+        // save mesh
+        ModelFactory::saveModel(m, string(options_->getOutput() + ".ply"));
+    }
 
 
 }

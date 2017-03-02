@@ -52,6 +52,7 @@
 #include "types.hpp"
 #include <cuda_runtime.h>
 #include <thread>
+#include <lvr/reconstruction/GlobalTsdfGrid.hpp>
 
 namespace kfusion
 {
@@ -70,7 +71,7 @@ namespace kfusion
 			* \param[in] cube_size physical size (in meters) of the volume (here, a cube) represented by the TSDF buffer.
 			* \param[in] nb_voxels_per_axis number of voxels per axis of the volume represented by the TSDF buffer.
 			*/
-			CyclicalBuffer (KinFuParams params): pl_(params),
+			CyclicalBuffer (KinFuParams params): pl_(params), options_(params.cmd_options),
 			                optimize_(params.cmd_options->optimizePlanes()), no_reconstruct_(params.cmd_options->noReconstruction())
 			{
 				distance_threshold_ = params.shifting_distance;
@@ -83,6 +84,13 @@ namespace kfusion
 				global_shift_[0] = 0;
 				global_shift_[1] = 0;
 				global_shift_[2] = 0;
+
+				//params.cmd_options
+				double voxel_size = (double)(params.volume_size[0] / params.volume_dims[0]);
+				BoundingBox<cVertex> bbox_ = BoundingBox<cVertex>(0.0, 0.0, 0.0, 300.0, 300.0, 300.0);
+				bbox_.expand(300.0, 300.0, 300.0);
+				//timestamp.setQuiet(!options->verbose());
+				global_tsdf_ = new GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point>(voxel_size, bbox_, true);
 			}
 
 
@@ -255,6 +263,9 @@ namespace kfusion
 
 		  //MaCuWrapper mcwrap_;
 		  LVRPipeline pl_;
+            Options *options_;
+            GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point> *global_tsdf_;
+
 			inline int calcIndex(float f) const
 			{
 				return f < 0 ? f-.5:f+.5;
