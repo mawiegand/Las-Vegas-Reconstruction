@@ -126,12 +126,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 				}
 			}
 
-            // print grid notice
-            string grid_notice = ("#### A:    Reloaded Grid Integration " + to_string(slice_count_) + "    ####");
-
-            ScopeTime *grid_time = new ScopeTime(grid_notice.c_str());
-            global_tsdf_->addSliceData(tsdf_ptr, cloud_slice_.cols);
-            delete grid_time;
+            global_tsdf_->addSliceToInQueue(tsdf_ptr, cloud_slice_.cols, last_shift);
             slice_count_++;
 		}
 	}
@@ -151,8 +146,6 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
     {
         global_tsdf_->saveMesh(options_->getOutput());
     }
-
-
 }
 
 void

@@ -24,7 +24,10 @@ namespace lvr
     GlobalTsdfGrid<VertexT, BoxT, TsdfT>::GlobalTsdfGrid(float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize) :
             HashGrid<VertexT, BoxT>(cellSize, bb, isVoxelsize)
     {
-
+        m_sliceInQueue = boost::shared_ptr<BlockingQueue>(new BlockingQueue());
+        m_writerThread = boost::shared_ptr<boost::thread>(new boost::thread(
+                boost::bind(&GlobalTsdfGrid<VertexT, BoxT, TsdfT>::writeSliceData, this)
+                ));
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
@@ -67,7 +70,24 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    bool GlobalTsdfGrid<VertexT, BoxT, TsdfT>::addSliceData(TsdfT *tsdf, size_t size)
+    bool GlobalTsdfGrid<VertexT, BoxT, TsdfT>::addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift)
+    {
+        m_sliceInQueue->Add(pair<pair<TsdfT*, size_t>, bool>(pair<TsdfT*, size_t>(tsdf, size), last_shift));
+    };
+
+    template<typename VertexT, typename BoxT, typename TsdfT>
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::writeSliceData()
+    {
+        auto slice_work = boost::any_cast<pair<pair<TsdfT*, size_t>, bool> >(m_sliceInQueue->Take());
+        pair<TsdfT*, size_t > slice = slice_work.first;
+        integrateSliceData(slice.first, slice.second);
+        if (!slice_work.second) {
+            writeSliceData();
+        }
+    };
+
+    template<typename VertexT, typename BoxT, typename TsdfT>
+    bool GlobalTsdfGrid<VertexT, BoxT, TsdfT>::integrateSliceData(TsdfT *tsdf, size_t size)
     {
         cout << timestamp << "Started adding data to global TSDF " << "Values: " << size << endl;
 
@@ -195,6 +215,9 @@ namespace lvr
     template<typename VertexT, typename BoxT, typename TsdfT>
     void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename)
     {
+        // wait for writerThread to integrate last slice before starting reconstruction
+        m_writerThread->join();
+
         //global_tsdf_->saveGrid("global_tsdf.grid");
 
         // create mesh
