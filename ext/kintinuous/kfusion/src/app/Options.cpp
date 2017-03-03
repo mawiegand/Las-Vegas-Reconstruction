@@ -57,7 +57,6 @@ Options::Options(int argc, char** argv) : m_descr("Supported options")
 			("depth", value<int>(&m_depth)->default_value(100), "Maximum recursion depth for region growing.")
 			("verbose", "set for verbose output.")
 			("threads", value<int>(&m_numThreads)->default_value( lvr::OpenMPConfig::getNumThreads() ), "Number of threads")
-			("noReloadedPipeline,p", "Disable reloaded pipeline to use old pipeline instead")
 			;
 
 	//m_pdescr.add("device", -1);
@@ -149,8 +148,7 @@ bool Options::textures() const
 bool Options::noVizualisation() const
 {
 	return m_variables.count("no_vizualisation") ||
-		   m_variables.count("no_reconstruct") ||
-		   !m_variables.count("noReloadedPipeline");
+		   m_variables.count("no_reconstruct");
 }
 
 bool Options::noReconstruction() const
@@ -198,11 +196,6 @@ int Options::getDepth() const
 float Options::getLineFusionThreshold() const
 {
     return m_variables["lft"].as<float>();
-}
-
-bool Options::noReloadedPipeline() const
-{
-	return m_variables.count("noReloadedPipeline");
 }
 
 Options::~Options() {
