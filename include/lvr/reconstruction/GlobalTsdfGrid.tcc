@@ -44,27 +44,23 @@ namespace lvr
         TsdfT tsdf[tsdfSize];
 
         size_t tsdfIndex = 0;
+        // calculate hash values of bounding box
+        size_t minHashValue = this->hashValue(bbMin.x, bbMin.y, bbMin.z);
+        size_t maxHashValue = this->hashValue(bbMax.x, bbMax.y, bbMax.z);
+
         // for each value in bounding box
         // TODO: determine required order by cyclical buffer
-        for (int x = bbMin.x; x < bbMax.x; x++)
+        for (size_t hash = minHashValue; hash <= maxHashValue; hash++)
         {
-            for (int y = bbMin.y; y < bbMax.y; y++)
-            {
-                for (int z = bbMin.z; z < bbMax.z; z++)
-                {
-                    // calculate hash value
-                    size_t hash_value = this->hashValue(x, y, z);
-                    // TODO: catch index out of bounce
-                    int grid_index = this->m_qpIndices[hash_value];
-                    QueryPoint<VertexT> qp = this->m_queryPoints[grid_index];
-                    VertexT position = qp.m_position;
-                    tsdf[tsdfIndex].x = position.x - center_of_bb_x;
-                    tsdf[tsdfIndex].y = position.y - center_of_bb_y;
-                    tsdf[tsdfIndex].z = position.z - center_of_bb_z;
-                    tsdf[tsdfIndex].w = qp.m_distance;
-                    tsdfIndex++;
-                }
-            }
+            // TODO: catch index out of bounce
+            int gridIndex = this->m_qpIndices[hash];
+            QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
+            VertexT position = qp.m_position;
+            tsdf[tsdfIndex].x = position.x - center_of_bb_x;
+            tsdf[tsdfIndex].y = position.y - center_of_bb_y;
+            tsdf[tsdfIndex].z = position.z - center_of_bb_z;
+            tsdf[tsdfIndex].w = qp.m_distance;
+            tsdfIndex++;
         }
 
         return &tsdf;
