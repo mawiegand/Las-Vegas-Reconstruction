@@ -31,7 +31,7 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    TsdfT* GlobalTsdfGrid<VertexT, BoxT, TsdfT>::getData(BoundingBox<VertexT> bb)
+    pair<TsdfT*, size_t> GlobalTsdfGrid<VertexT, BoxT, TsdfT>::getData(BoundingBox<VertexT> bb)
     {
         std::cout << "get data from global TSDF" << std::endl;
 
@@ -40,33 +40,59 @@ namespace lvr
         int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
 
         VertexT bbMin = bb.getMin();
-        VertexT bbMax = bb.getMin();
+        VertexT bbMax = bb.getMax();
 
         // calculate tsdf size
-        size_t tsdfSize = (bbMax.x - bbMin.x) * (bbMax.y - bbMin.y) * (bbMax.z - bbMin.z);
-        TsdfT tsdf[tsdfSize];
+        size_t tsdfSize = abs((bbMax.x - bbMin.x) * (bbMax.y - bbMin.y) * (bbMax.z - bbMin.z) / this->m_voxelsize);
+        cout << timestamp << "Started getting data from global TSDF " << "Values: " << tsdfSize << endl;
+        cv::Mat tsdfValues(1, tsdfSize, CV_32FC4);
+        TsdfT* tsdf = tsdfValues.ptr<TsdfT>();
 
-        size_t tsdfIndex = 0;
-        // calculate hash values of bounding box
-        size_t minHashValue = this->hashValue(bbMin.x, bbMin.y, bbMin.z);
-        size_t maxHashValue = this->hashValue(bbMax.x, bbMax.y, bbMax.z);
-
-        // for each value in bounding box
-        // TODO: determine required order by cyclical buffer
-        for (size_t hash = minHashValue; hash <= maxHashValue; hash++)
+        if (tsdf != NULL)
         {
-            // TODO: catch index out of bounce
-            int gridIndex = this->m_qpIndices[hash];
-            QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
-            VertexT position = qp.m_position;
-            tsdf[tsdfIndex].x = position.x - center_of_bb_x;
-            tsdf[tsdfIndex].y = position.y - center_of_bb_y;
-            tsdf[tsdfIndex].z = position.z - center_of_bb_z;
-            tsdf[tsdfIndex].w = qp.m_distance;
-            tsdfIndex++;
-        }
+            size_t tsdfIndex = 0;
 
-        return &tsdf;
+            // TODO: determine required order by cyclical buffer
+            /* TODO: check hash loop
+            // calculate hash values of bounding box
+            size_t minHashValue = this->hashValue(bbMin.x, bbMin.y, bbMin.z);
+            size_t maxHashValue = this->hashValue(bbMax.x, bbMax.y, bbMax.z);
+            // for each value in bounding box
+            for (size_t hash = minHashValue; hash <= maxHashValue; hash++)
+            {
+                // TODO: catch index out of bounce
+                int gridIndex = this->m_qpIndices[hash];
+                QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
+                VertexT position = qp.m_position;
+                tsdf[tsdfIndex].x = position.x - center_of_bb_x;
+                tsdf[tsdfIndex].y = position.y - center_of_bb_y;
+                tsdf[tsdfIndex].z = position.z - center_of_bb_z;
+                tsdf[tsdfIndex].w = qp.m_distance;
+                tsdfIndex++;
+            }*/
+            for (int x = bbMin.x; x <= bbMax.x; x++)
+            {
+                for (int y = bbMin.y; y <= bbMax.y; y++)
+                {
+                    for (int z = bbMin.z; z <= bbMax.z; z++)
+                    {
+                        // TODO: catch index out of bounce
+                        size_t hash = this->hashValue(x, y, z);
+                        int gridIndex = this->m_qpIndices[hash];
+                        QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
+                        VertexT position = qp.m_position;
+                        tsdf[tsdfIndex].x = position.x - center_of_bb_x;
+                        tsdf[tsdfIndex].y = position.y - center_of_bb_y;
+                        tsdf[tsdfIndex].z = position.z - center_of_bb_z;
+                        tsdf[tsdfIndex].w = qp.m_distance;
+                        tsdfIndex++;
+                    }
+                }
+            }
+        }
+        cout << timestamp << "Finished getting data from global TSDF" << endl;
+
+        return pair<TsdfT*, size_t>(tsdf, tsdfSize);
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>

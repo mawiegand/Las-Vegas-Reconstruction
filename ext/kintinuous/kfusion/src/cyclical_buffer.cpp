@@ -140,7 +140,17 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 		shiftOrigin (volume, offset);
 
         // TODO: integrate existing GlobalTSDFData here
-        //volume->integrateSlice(&buffer_, offset);
+        Vec3i max(global_shift_[0] + buffer_.volume_size.x,
+                  global_shift_[1] + buffer_.volume_size.y,
+                  global_shift_[2] + buffer_.volume_size.z);
+        Vec3i min = max - offset;
+        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(min[0], min[1], min[2], max[0], max[1], max[2]);
+        pair<Point*, size_t> data = global_tsdf_->getData(bbox);
+
+        //DeviceArray<Point> integrationCloud(data.second);
+        //integrationCloud.upload(data.first, data.second);
+
+        //volume->integrateSlice(&buffer_, integrationCloud, offset);
 	}
     if (last_shift)
     {
