@@ -43,9 +43,10 @@ namespace lvr
         VertexT bbMax = bb.getMax();
 
         // calculate tsdf size
-        size_t tsdfSize = abs((bbMax.x - bbMin.x) * (bbMax.y - bbMin.y) * (bbMax.z - bbMin.z) / this->m_voxelsize);
-        cout << timestamp << "Started getting data from global TSDF " << "Values: " << tsdfSize << endl;
+        size_t tsdfSize = abs((bbMax.x - bbMin.x + 1) * (bbMax.y - bbMin.y + 1) * (bbMax.z - bbMin.z + 1));
+        cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
         cv::Mat tsdfValues(1, tsdfSize, CV_32FC4);
+
         TsdfT* tsdf = tsdfValues.ptr<TsdfT>();
 
         if (tsdf != NULL)
