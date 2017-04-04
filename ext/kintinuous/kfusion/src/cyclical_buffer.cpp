@@ -77,8 +77,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 	Vec3i maxBounds;
 	if(!last_shift)
 		computeAndSetNewCubeMetricOrigin (volume, target_point, offset);
-	//ScopeTime* slice_time = new ScopeTime("Slice download");
-	// extract current slice from the TSDF volume (coordinates are in indices! (see fetchSliceAsCloud() )
+
 	if(!no_reconstruct_)
 	{
 		DeviceArray<Point> cloud;
@@ -99,32 +98,10 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 		cloud_slice_ = cv::Mat(1, (int)cloud.size(), CV_32FC4);
 		cloud.download(cloud_slice_.ptr<Point>());
 
-		//delete slice_time;
-
 		Point* tsdf_ptr = cloud_slice_.ptr<Point>();
 		if(cloud.size() > 0)
 		{
 			std::cout << "####    Performing slice number: " << slice_count_ << " with " << cloud.size() << " TSDF values  ####" << std::endl;
-			Vec3i fusionShift = global_shift_;
-			Vec3i fusionBackShift = global_shift_;
-			for(int i = 0; i < 3; i++)
-			{
-				if(minBounds[i] == 1 && !last_shift)
-				{
-					fusionShift[i] += maxBounds[i];
-					fusionBackShift[i] += minBounds[i];
-				}
-				else if(last_shift)
-                {
-                    fusionShift[i] -= 1000000000;
-					fusionBackShift[i] += maxBounds[i];
-                }
-                else
-				{
-					fusionShift[i] += minBounds[i];
-					fusionBackShift[i] += maxBounds[i];
-				}
-			}
 
             global_tsdf_->addSliceToInQueue(tsdf_ptr, cloud_slice_.cols, last_shift);
             slice_count_++;
@@ -140,17 +117,24 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 		shiftOrigin (volume, offset);
 
         // TODO: integrate existing GlobalTSDFData here
-        Vec3i max(global_shift_[0] + buffer_.volume_size.x,
-                  global_shift_[1] + buffer_.volume_size.y,
-                  global_shift_[2] + buffer_.volume_size.z);
-        Vec3i min = max - offset;
+
+        // Calculate bounding box
+        Vec3i min(minBounds[0] + buffer_.volume_size.x,
+                  minBounds[1] + buffer_.volume_size.y,
+                  minBounds[2] + buffer_.volume_size.z);
+        Vec3i max(maxBounds[0] + buffer_.volume_size.x,
+                  maxBounds[1] + buffer_.volume_size.y,
+                  maxBounds[2] + buffer_.volume_size.z);
         lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(min[0], min[1], min[2], max[0], max[1], max[2]);
+
+        // get data from global tsdf in bounding box
         pair<Point*, size_t> data = global_tsdf_->getData(bbox);
 
-        //DeviceArray<Point> integrationCloud(data.second);
-        //integrationCloud.upload(data.first, data.second);
+        // prepare data for integration in device buffer
+        DeviceArray<Point> integrationCloud(data.second);
+        integrationCloud.upload(data.first, data.second);
 
-        //volume->integrateSlice(&buffer_, integrationCloud, offset);
+        //volume->integrateSlice(&buffer_, integrationCloud, min, max, global_shift_);
 	}
     if (last_shift)
     {
