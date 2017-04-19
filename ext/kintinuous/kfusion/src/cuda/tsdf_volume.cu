@@ -1,6 +1,7 @@
 #include <kfusion/cuda/device.hpp>
 #include <kfusion/cuda/texture_binder.hpp>
 #include <kfusion/tsdf_buffer.h>
+#include <stdio.h>
 
 
 using namespace kfusion::device;
@@ -193,6 +194,108 @@ namespace kfusion
         };
 
         __global__ void integrate_kernel( const TsdfIntegrator integrator, TsdfVolume volume, tsdf_buffer buffer) { integrator(volume, buffer); };
+
+        __global__ void integrateSliceKernel(TsdfVolume tsdf, tsdf_buffer buffer, int3 minBounds, int3 maxBounds, PtrSz<Point> deviceData)
+        {
+            int x = threadIdx.x + blockIdx.x * blockDim.x;
+            int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+            int zStepSize = (maxBounds.y - minBounds.y) * (maxBounds.x - minBounds.x);
+            int yStepSize = (maxBounds.x - minBounds.x);
+
+            TsdfVolume::elem_type* vptr = tsdf.beg(x, y);
+            for (int z = 0; z < tsdf.dims.z; ++z, vptr = tsdf.zstep(vptr))
+            {
+                // The black zone is the name given to the subvolume within the TSDF Volume grid that is shifted out.
+                // In other words, the set of points in the TSDF grid that we want to extract in order to add it to the world model being built in CPU.
+                bool inBlackZone = (
+                        (x >= minBounds.x && x <= maxBounds.x) &&
+                        (y >= minBounds.y && y <= maxBounds.y) &&
+                        (z >= minBounds.z && z <= maxBounds.z)
+                );
+
+                if (x < tsdf.dims.x && y < tsdf.dims.y && inBlackZone)
+                {
+                    ushort2* pos = const_cast<ushort2*> (vptr);
+
+                    shift_tsdf_pointer (&pos, buffer);
+
+                    //float tsdfValue = z % 2 == 0 ? 0.0001f : - 0.0001f;
+                    //float tsdfValue = z % 2 == 0 ? deviceData.data->w : -deviceData.data->w;
+                    float tsdfValue = (deviceData.data + z * zStepSize + y * yStepSize + x)->w;
+# if __CUDA_ARCH__>=200
+                    //if ((z == 0 || z == 1) && tsdfValue != 0.f) printf("TSDF-Value: %f \n", tsdfValue);
+#endif
+                    int weight = tsdf.max_weight;
+                    gmem::StCs(pack_tsdf(tsdfValue, weight), pos);
+                }
+            }
+
+//            int x = threadIdx.x + blockIdx.x * blockDim.x;
+//            int y = threadIdx.y + blockIdx.y * blockDim.y;
+//
+//            //compute relative indices
+//            int idX, idY;
+//            if(x <= minBounds.x)
+//                idX = x + buffer.voxels_size.x;
+//            else
+//                idX = x;
+//            if(y <= minBounds.y)
+//                idY = y + buffer.voxels_size.y;
+//            else
+//                idY = y;
+//
+//            if ( x < buffer.voxels_size.x && y < buffer.voxels_size.y)
+//            {
+//                if( (idX >= minBounds.x && idX <= maxBounds.x) || (idY >= minBounds.y && idY <= maxBounds.y) )
+//                {
+//                    /// BLACK ZONE => clear on all Z values
+//                    ushort2 *beg = tsdf.beg(x, y);
+//                    ushort2 *end = beg + tsdf.dims.x * tsdf.dims.y * tsdf.dims.z;
+//
+//                    size_t z_index = 0;
+//                    for(ushort2* pos = beg; pos != end; pos = tsdf.zstep(pos))
+//                    {
+//                        *pos = pack_tsdf (z_index % 2 == 0 ? 0.0001f : - 0.0001f, tsdf.max_weight);
+//                        z_index++;
+//                    }
+//                }
+//                else /* if( idX > maxBounds.x && idY > maxBounds.y) */
+//                {
+//                    ///RED ZONE  => clear only appropriate Z
+//
+//                    ///Pointer to the first x,y,0
+//                    ushort2 *pos = tsdf.beg(x, y);
+//
+//                    ///Get the size of the whole TSDF memory
+//                    int size = buffer.tsdf_memory_end - buffer.tsdf_memory_start;
+//
+//                    ///Move pointer to the Z origin
+//                    pos = tsdf.multzstep(minBounds.z, pos);
+//
+//                    if(maxBounds.z < 0)
+//                    {
+//                        pos = tsdf.multzstep(maxBounds.z, pos);
+//                    }
+//                    ///We make sure that we are not already before the start of the memory
+//                    if(pos < buffer.tsdf_memory_start)
+//                        pos = pos + size;
+//
+//                    int nbSteps = abs(maxBounds.z);
+//
+//#pragma unroll
+//                    for(int z = 0; z < nbSteps; ++z, pos = tsdf.zstep(pos))
+//                    {
+//                        ///If we went outside of the memory, make sure we go back to the begining of it
+//                        if(pos > buffer.tsdf_memory_end)
+//                            pos = pos - size;
+//
+//                        if (pos >= buffer.tsdf_memory_start && pos <= buffer.tsdf_memory_end) // quickfix for http://dev.pointclouds.org/issues/894
+//                            *pos = pack_tsdf (z % 2 == 0 ? 0.0001f : - 0.0001f, tsdf.max_weight);
+//                    }
+//                } //else /* if( idX > maxBounds.x && idY > maxBounds.y)*/
+//            } // if ( x < VOLUME_X && y < VOLUME_Y)
+        };
     }
 }
 
@@ -214,6 +317,28 @@ void kfusion::device::integrate(const PtrStepSz<ushort>& dists, TsdfVolume& volu
     dim3 grid(divUp(volume.dims.x, block.x), divUp(volume.dims.y, block.y));
 
     integrate_kernel<<<grid, block>>>(ti, volume, buffer);
+    cudaSafeCall ( cudaGetLastError () );
+    cudaSafeCall ( cudaDeviceSynchronize() );
+}
+
+void kfusion::device::integrateSlice(TsdfVolume& volume, tsdf_buffer* buffer, const Vec3i minBounds,
+                                     const Vec3i maxBounds, const Vec3i globalShift, PtrSz<Point> deviceData)
+{
+    /*dim3 block(32, 8);
+    dim3 grid(divUp(volume.dims.x, block.x), divUp(volume.dims.y, block.y));
+
+    integrateSliceKernel<<<grid, block>>>(volume, buffer);*/
+
+    dim3 block (32, 16);
+    dim3 grid (1, 1, 1);
+    grid.x = divUp (buffer->voxels_size.x, block.x);
+    grid.y = divUp (buffer->voxels_size.y, block.y);
+
+    printf("minBounds: (%d, %d, %d)\n", minBounds.x, minBounds.y, minBounds.z);
+    printf("maxBounds: (%d, %d, %d)\n", maxBounds.x, maxBounds.y, maxBounds.z);
+    printf("diff: (%d, %d, %d)\n", maxBounds.x - minBounds.x, maxBounds.y - minBounds.y, maxBounds.z - minBounds.z);
+
+    integrateSliceKernel<<<grid, block>>>(volume, *buffer, minBounds, maxBounds, deviceData);
     cudaSafeCall ( cudaGetLastError () );
     cudaSafeCall ( cudaDeviceSynchronize() );
 }

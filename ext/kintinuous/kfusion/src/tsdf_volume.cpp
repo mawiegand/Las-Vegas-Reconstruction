@@ -215,3 +215,34 @@ kfusion::cuda::TsdfVolume::fetchSliceAsCloud (DeviceArray<Point>& cloud_buffer, 
 
     return DeviceArray<Point>((Point*)cloud_buffer.ptr(), size);
 }
+
+void kfusion::cuda::TsdfVolume::integrateSlice(kfusion::tsdf_buffer* buffer, DeviceArray<Point>& data,
+                                               const Vec3i minBounds, const Vec3i maxBounds,
+                                               const Vec3i globalShift) const
+{
+    device::Vec3i dims = device_cast<device::Vec3i>(dims_);
+    device::Vec3f vsz  = device_cast<device::Vec3f>(getVoxelSize());
+
+    // Copy values from host memory to graphics memory
+    device::Vec3i deviceGlobalShift;
+    deviceGlobalShift.x = globalShift[0];
+    deviceGlobalShift.y = globalShift[1];
+    deviceGlobalShift.z = globalShift[2];
+
+    device::Vec3i minBounds_c;
+    minBounds_c.x = minBounds[0];
+    minBounds_c.y = minBounds[1];
+    minBounds_c.z = minBounds[2];
+
+    device::Vec3i maxBounds_c;
+    maxBounds_c.x = maxBounds[0];
+    maxBounds_c.y = maxBounds[1];
+    maxBounds_c.z = maxBounds[2];
+
+    DeviceArray<device::Point>& deviceData = (DeviceArray<device::Point>&) data;
+
+    device::TsdfVolume volume((ushort2*)data_.ptr<ushort2>(), dims, vsz, trunc_dist_, max_weight_);
+
+    // TODO: add data to function?!
+    device::integrateSlice(volume, buffer, minBounds_c, maxBounds_c, deviceGlobalShift, deviceData);
+}

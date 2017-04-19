@@ -72,6 +72,29 @@ namespace lvr
                 tsdfIndex++;
             }*/
 
+//            /* test sphere */
+//            VertexT center((bbMax.x - bbMin.x) / 2, (bbMax.y - bbMin.y) / 2, (bbMax.z - bbMin.z) / 2);
+//            float radius = 1.f;
+//            for (int z = bbMin.z; z <= bbMax.z; z++)
+//            {
+//                for (int y = bbMin.y; y <= bbMax.y; y++)
+//                {
+//                    for (int x = bbMin.x; x <= bbMax.x; x++)
+//                    {
+//                        float distance = sqrt(pow((x - center.x), 2) * m_voxelsize
+//                                              + pow((y - center.y), 2) * m_voxelsize
+//                                              + pow((z - center.z), 2) * m_voxelsize)
+//                                         - radius;
+//                        tsdf[tsdfIndex].x = x;
+//                        tsdf[tsdfIndex].y = y;
+//                        tsdf[tsdfIndex].z = z;
+//                        tsdf[tsdfIndex].w = (distance >= -1.f || distance <= 1.f) ? distance : 0.f;
+//                        tsdfIndex++;
+//                    }
+//                }
+//            }
+//            /* test sphere */
+
             if (this->m_qpIndices.size() > 0)
             {
                 static char fileName[23];
