@@ -34,6 +34,7 @@ namespace lvr
         bool addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift);
         virtual void addLatticePoint(int index_x, int index_y, int index_z, float distance = 0);
         void saveMesh(string filename);
+        void exportGlobalTSDFValues();
         ~GlobalTsdfGrid();
     };
 }

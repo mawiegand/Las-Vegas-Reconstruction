@@ -71,24 +71,59 @@ namespace lvr
                 tsdf[tsdfIndex].w = qp.m_distance;
                 tsdfIndex++;
             }*/
-            for (int x = bbMin.x; x <= bbMax.x; x++)
+
+            if (this->m_qpIndices.size() > 0)
             {
-                for (int y = bbMin.y; y <= bbMax.y; y++)
+                static char fileName[23];
+                time_t now = time(0);
+                strftime(fileName, sizeof(fileName), "get_%Y%m%d_%H%M%S.3d", localtime(&now));
+
+                std::ofstream file;
+                file.open(fileName);
+
+                int stepSize = 5;
+                for (int z = bbMin.z + center_of_bb_z; z <= bbMax.z + center_of_bb_z; z += stepSize)
                 {
-                    for (int z = bbMin.z; z <= bbMax.z; z++)
+                    for (int y = bbMin.y + center_of_bb_y; y <= bbMax.y + center_of_bb_y; y += stepSize)
                     {
-                        // TODO: catch index out of bounce
-                        size_t hash = this->hashValue(x, y, z);
-                        int gridIndex = this->m_qpIndices[hash];
-                        QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
-                        VertexT position = qp.m_position;
-                        tsdf[tsdfIndex].x = position.x - center_of_bb_x;
-                        tsdf[tsdfIndex].y = position.y - center_of_bb_y;
-                        tsdf[tsdfIndex].z = position.z - center_of_bb_z;
-                        tsdf[tsdfIndex].w = qp.m_distance;
-                        tsdfIndex++;
+                        for (int x = bbMin.x + center_of_bb_x; x <= bbMax.x + center_of_bb_x; x += stepSize)
+                        {
+                            // TODO: catch index out of bounce
+                            try
+                            {
+                                size_t hash = this->hashValue(x, y, z);
+                                size_t gridIndex = this->m_qpIndices.at(hash);
+                                QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
+                                VertexT position = qp.m_position;
+                                tsdf[tsdfIndex].x = position.x - center_of_bb_x;
+                                tsdf[tsdfIndex].y = position.y - center_of_bb_y;
+                                tsdf[tsdfIndex].z = position.z - center_of_bb_z;
+                                tsdf[tsdfIndex].w = qp.m_distance;
+                            }
+                            catch (const std::out_of_range &oor)
+                            {
+                                tsdf[tsdfIndex].x = x - center_of_bb_x;
+                                tsdf[tsdfIndex].y = y - center_of_bb_y;
+                                tsdf[tsdfIndex].z = z - center_of_bb_z;
+                                tsdf[tsdfIndex].w = 0.f;
+                            }
+                            file << tsdf[tsdfIndex].x
+                                 << " " << tsdf[tsdfIndex].y
+                                 << " " << tsdf[tsdfIndex].z;
+                            if (tsdf[tsdfIndex].w > 0.f )
+                            {
+                                file << " " << 0 << " " << 0 << " " << 255;
+                            }
+                            else
+                            {
+                                file << " " << 255 << " " << 0 << " " << 0;
+                            }
+                            file << std::endl;
+                            tsdfIndex++;
+                        }
                     }
                 }
+                file.close();
             }
         }
         cout << timestamp << "Finished getting data from global TSDF" << endl;
@@ -247,6 +282,9 @@ namespace lvr
 
         //global_tsdf_->saveGrid("global_tsdf.grid");
 
+        // if debugging enabled
+        exportGlobalTSDFValues();
+
         // create mesh
         MeshPtr meshPtr = new HMesh();
         cFastReconstruction *fast_recon = new cFastReconstruction(this);
@@ -261,8 +299,45 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::exportGlobalTSDFValues()
+    {
+        std::cout << "Started exporting global TSDF Values. Amount of points: " << this->m_qpIndices.size() << std::endl;
+
+        int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
+        int center_of_bb_y = (this->m_boundingBox.getYSize() / 2) / this->m_voxelsize;
+        int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
+
+        static char fileName[26];
+        time_t now = time(0);
+        strftime(fileName, sizeof(fileName), "global_%Y%m%d_%H%M%S.3d", localtime(&now));
+
+        std::ofstream globalFile;
+        globalFile.open(fileName);
+        for ( std::pair<size_t, size_t> index : this->m_qpIndices)
+        {
+            int gridIndex = index.second;
+            QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
+            VertexT position = qp.m_position;
+            globalFile << position.x - center_of_bb_x
+                       << " " << position.y - center_of_bb_y
+                       << " " << position.z - center_of_bb_z;
+            if (qp.m_distance > 0.f )
+            {
+                globalFile << " " << 0 << " " << 255 << " " << 0;
+            }
+            else
+            {
+                globalFile << " " << 0 << " " << 255 << " " << 255;
+            }
+            globalFile << std::endl;
+        }
+        globalFile.close();
+
+        std::cout << timestamp << "Finished exporting global TSDF values" << endl;
+    }
+
+    template<typename VertexT, typename BoxT, typename TsdfT>
     GlobalTsdfGrid<VertexT, BoxT, TsdfT>::~GlobalTsdfGrid()
     {
-
     }
 }
