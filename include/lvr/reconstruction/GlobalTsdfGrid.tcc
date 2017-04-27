@@ -43,7 +43,8 @@ namespace lvr
         VertexT bbMax = bb.getMax();
 
         // calculate tsdf size
-        size_t tsdfSize = abs((bbMax.x - bbMin.x + 1) * (bbMax.y - bbMin.y + 1) * (bbMax.z - bbMin.z + 1));
+        int stepSize = 5;
+        size_t tsdfSize = abs((bbMax.x - bbMin.x + 1) * (bbMax.y - bbMin.y + 1) * (bbMax.z - bbMin.z + 1)) / pow(stepSize, 3);
         cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
         cv::Mat tsdfValues(1, tsdfSize, CV_32FC4);
 
@@ -73,25 +74,72 @@ namespace lvr
             }*/
 
 //            /* test sphere */
+//            bool debug = true;
 //            VertexT center((bbMax.x - bbMin.x) / 2, (bbMax.y - bbMin.y) / 2, (bbMax.z - bbMin.z) / 2);
-//            float radius = 1.f;
-//            for (int z = bbMin.z; z <= bbMax.z; z++)
+//            float radius = 2.f;
+//
+//            std::ofstream sphereFile;
+//            if (debug)
 //            {
-//                for (int y = bbMin.y; y <= bbMax.y; y++)
+//                static char sphereFileName[26];
+//                time_t now = time(0);
+//                strftime(sphereFileName, sizeof(sphereFileName), "sphere_%Y%m%d_%H%M%S.3d", localtime(&now));
+//                sphereFile.open(sphereFileName);
+//            }
+//
+//            #pragma omp parallel for
+//            for (int z = (int) bbMin.z; z <= (int) bbMax.z; z+= stepSize)
+//            {
+//                for (int y = (int) bbMin.y; y <= (int) bbMax.y; y+= stepSize)
 //                {
-//                    for (int x = bbMin.x; x <= bbMax.x; x++)
+//                    for (int x = (int) bbMin.x; x <= (int) bbMax.x; x+= stepSize)
 //                    {
-//                        float distance = sqrt(pow((x - center.x), 2) * m_voxelsize
-//                                              + pow((y - center.y), 2) * m_voxelsize
-//                                              + pow((z - center.z), 2) * m_voxelsize)
+//                        float distance = sqrt(pow((x - center.x), 2) * this->m_voxelsize
+//                                              + pow((y - center.y), 2) * this->m_voxelsize
+//                                              + pow((z - center.z), 2) * this->m_voxelsize)
 //                                         - radius;
 //                        tsdf[tsdfIndex].x = x;
 //                        tsdf[tsdfIndex].y = y;
 //                        tsdf[tsdfIndex].z = z;
-//                        tsdf[tsdfIndex].w = (distance >= -1.f || distance <= 1.f) ? distance : 0.f;
+//                        tsdf[tsdfIndex].w = (distance >= -1.f && distance <= 1.f) ? distance : 0.f;
+//
+//                        if (debug)
+//                        {
+//                            if (distance <= 1.f)
+//                            {
+//                                sphereFile << x
+//                                           << " " << y
+//                                           << " " << z;
+//                            }
+//                            if (distance >= 0.f && distance <= 1.f)
+//                            {
+//                                sphereFile << " " << 255
+//                                           << " " << 0
+//                                           << " " << 0
+//                                           << std::endl;
+//                            }
+//                            else if (distance >= -1.f && distance < 0.f)
+//                            {
+//                                sphereFile << " " << 0
+//                                           << " " << 255
+//                                           << " " << 0
+//                                           << std::endl;
+//                            }
+//                            else if (distance < -1.f)
+//                            {
+//                                sphereFile << " " << 255
+//                                           << " " << 255
+//                                           << " " << 255
+//                                           << std::endl;
+//                            }
+//                        }
 //                        tsdfIndex++;
 //                    }
 //                }
+//            }
+//            if (debug)
+//            {
+//                sphereFile.close();
 //            }
 //            /* test sphere */
 
@@ -104,17 +152,17 @@ namespace lvr
                 std::ofstream file;
                 file.open(fileName);
 
-                int stepSize = 5;
-                for (int z = bbMin.z + center_of_bb_z; z <= bbMax.z + center_of_bb_z; z += stepSize)
+                #pragma omp parallel for
+                for(int x = (int) (bbMin.x + center_of_bb_x); x <= (int) (bbMax.x + center_of_bb_x); x += stepSize)
                 {
-                    for (int y = bbMin.y + center_of_bb_y; y <= bbMax.y + center_of_bb_y; y += stepSize)
+                    for (int y = (int) (bbMin.y + center_of_bb_y); y <= (int) (bbMax.y + center_of_bb_y); y += stepSize)
                     {
-                        for (int x = bbMin.x + center_of_bb_x; x <= bbMax.x + center_of_bb_x; x += stepSize)
+                        for (int z = (int) (bbMin.z + center_of_bb_z); z <= (int) (bbMax.z + center_of_bb_z); z += stepSize)
                         {
                             // TODO: catch index out of bounce
+                            size_t hash = this->hashValue(x, y, z);
                             try
                             {
-                                size_t hash = this->hashValue(x, y, z);
                                 size_t gridIndex = this->m_qpIndices.at(hash);
                                 QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
                                 VertexT position = qp.m_position;
