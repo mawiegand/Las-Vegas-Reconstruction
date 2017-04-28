@@ -182,24 +182,24 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 //                                                                   maxBounds[0], maxBounds[1], maxBounds[2]);
 //        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0, 0, 416, 512, 512, 480);
 
-        cv::Vec3f sliceMinF(0, 0, 416);
-        cv::Vec3f sliceMaxF(511, 511, 511);
-        Vec3i sliceMin = cam_pose * sliceMinF;
-        Vec3i sliceMax = cam_pose * sliceMaxF;
-        std::cout << "sliceMin: " << sliceMin << " sliceMax: " << sliceMax << std::endl;
-        if (sliceMin[0] > sliceMax[0])
-            std::swap (sliceMin[0], sliceMax[0]);
-        if (sliceMin[1] > max[1])
-            std::swap (sliceMin[1], sliceMax[1]);
-        if (sliceMin[2] > max[2])
-            std::swap (sliceMin[2], sliceMax[2]);
-        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(sliceMin[0], sliceMin[1], sliceMin[2],
-                                                                   sliceMax[0], sliceMax[1], sliceMax[2]);
+//        cv::Vec3f sliceMinF(0, 0, 416);
+//        cv::Vec3f sliceMaxF(511, 511, 511);
+//        Vec3i sliceMin = cam_pose * sliceMinF;
+//        Vec3i sliceMax = cam_pose * sliceMaxF;
+//        std::cout << "sliceMin: " << sliceMin << " sliceMax: " << sliceMax << std::endl;
+//        if (sliceMin[0] > sliceMax[0])
+//            std::swap (sliceMin[0], sliceMax[0]);
+//        if (sliceMin[1] > max[1])
+//            std::swap (sliceMin[1], sliceMax[1]);
+//        if (sliceMin[2] > max[2])
+//            std::swap (sliceMin[2], sliceMax[2]);
+//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(sliceMin[0], sliceMin[1], sliceMin[2],
+//                                                                   sliceMax[0], sliceMax[1], sliceMax[2]);
 
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0 + global_shift_[0], 0 + global_shift_[1], 416 + global_shift_[2],
-//                                                                   512 + global_shift_[0], 512 + global_shift_[1], 480 + global_shift_[2]);
+        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0 + global_shift_[0], 0 + global_shift_[1], 0 + global_shift_[2],
+                                                                   511 + global_shift_[0], 511 + global_shift_[1], 511 + global_shift_[2]);
 //        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0 + global_shift_[0], 0 + global_shift_[1], 0 + global_shift_[2],
-//                                                                   511 + global_shift_[0], 511 + global_shift_[1], 5 + global_shift_[2]);
+//                                                                   511 + global_shift_[0], 511 + global_shift_[1], 511 + global_shift_[2]);
 
         int center_of_bb_x = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
         int center_of_bb_y = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
