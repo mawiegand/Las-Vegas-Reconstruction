@@ -44,7 +44,7 @@ namespace lvr
 
         // calculate tsdf size
         int stepSize = 5;
-        size_t tsdfSize = abs((bbMax.x - bbMin.x + 1) * (bbMax.y - bbMin.y + 1) * (bbMax.z - bbMin.z + 1)) / pow(stepSize, 3);
+        size_t tsdfSize = ((int) abs(bbMax.x - bbMin.x + 1) / stepSize) * ((int) abs(bbMax.y - bbMin.y + 1) / stepSize) * ((int) abs(bbMax.z - bbMin.z + 1) / stepSize);
         cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
         cv::Mat tsdfValues(1, tsdfSize, CV_32FC4);
 
@@ -87,12 +87,12 @@ namespace lvr
 //                sphereFile.open(sphereFileName);
 //            }
 //
-//            #pragma omp parallel for
-//            for (int z = (int) bbMin.z; z <= (int) bbMax.z; z+= stepSize)
+//            //#pragma omp parallel for
+//            for (int z = (int) (bbMin.z + stepSize - 1); z <= (int) bbMax.z; z += stepSize)
 //            {
-//                for (int y = (int) bbMin.y; y <= (int) bbMax.y; y+= stepSize)
+//                for (int y = (int) (bbMin.y + stepSize - 1); y <= (int) bbMax.y; y += stepSize)
 //                {
-//                    for (int x = (int) bbMin.x; x <= (int) bbMax.x; x+= stepSize)
+//                    for (int x = (int) (bbMin.x + stepSize - 1); x <= (int) bbMax.x; x += stepSize)
 //                    {
 //                        float distance = sqrt(pow((x - center.x), 2) * this->m_voxelsize
 //                                              + pow((y - center.y), 2) * this->m_voxelsize
@@ -152,12 +152,12 @@ namespace lvr
                 std::ofstream file;
                 file.open(fileName);
 
-                #pragma omp parallel for
-                for(int x = (int) (bbMin.x + center_of_bb_x); x <= (int) (bbMax.x + center_of_bb_x); x += stepSize)
+                //#pragma omp parallel for
+                for(int x = (int) (bbMin.x + center_of_bb_x  + stepSize - 1); x <= (int) (bbMax.x + center_of_bb_x); x += stepSize)
                 {
-                    for (int y = (int) (bbMin.y + center_of_bb_y); y <= (int) (bbMax.y + center_of_bb_y); y += stepSize)
+                    for (int y = (int) (bbMin.y + center_of_bb_y + stepSize - 1); y <= (int) (bbMax.y + center_of_bb_y); y += stepSize)
                     {
-                        for (int z = (int) (bbMin.z + center_of_bb_z); z <= (int) (bbMax.z + center_of_bb_z); z += stepSize)
+                        for (int z = (int) (bbMin.z + center_of_bb_z + stepSize - 1); z <= (int) (bbMax.z + center_of_bb_z); z += stepSize)
                         {
                             // TODO: catch index out of bounce
                             size_t hash = this->hashValue(x, y, z);
