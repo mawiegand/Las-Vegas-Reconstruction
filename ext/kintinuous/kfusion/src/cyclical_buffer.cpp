@@ -42,25 +42,11 @@
 bool
 kfusion::cuda::CyclicalBuffer::checkForShift (cv::Ptr<cuda::TsdfVolume> volume, const Affine3f &cam_pose, const double distance_camera_target, const bool perform_shift, const bool last_shift, const bool record_mode)
 {
-//    std::cout << "camera: " << std::endl;
-//    for (int i = 0; i < 4; ++i)
-//    {
-//        std::cout << cam_pose.matrix.val[i] << " "
-//                  << cam_pose.matrix.val[i + 1] << " "
-//                  << cam_pose.matrix.val[i + 2] << " "
-//                  << cam_pose.matrix.val[i + 3] << " "
-//                  << std::endl;
-//    }
-//    std::cout << std::endl;
-
     bool result = false;
     //mcwrap_.setCameraDist(distance_camera_target);
  	cv::Vec3f targetPoint(0,0, distance_camera_target);
-//    std::cout << "targetPoint: " << targetPoint << std::endl;
  	targetPoint = cam_pose * targetPoint;
-//    std::cout << "targetPoint affine: " << targetPoint << std::endl;
     targetPoint[1] = cam_pose.translation()[1];
-//    std::cout << "targetPoint translation: " << targetPoint << std::endl;
 	cv::Vec3f center_cube;
 	center_cube[0] = buffer_.origin_metric.x + buffer_.volume_size.x/2.0f;
 	center_cube[1] = buffer_.origin_metric.y + buffer_.volume_size.y/2.0f;
@@ -147,59 +133,15 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
         // TODO: integrate existing GlobalTSDFData here
 
         // Calculate bounding box
-        Vec3i max(global_shift_[0] + buffer_.voxels_size.x,
-                  global_shift_[1] + buffer_.voxels_size.y,
-                  global_shift_[2] + buffer_.voxels_size.z);
-        Vec3i min = max - offset;
-        if (min[0] > max[0])
-            std::swap (min[0], max[0]);
-        if (min[1] > max[1])
-            std::swap (min[1], max[1]);
-        if (min[2] > max[2])
-            std::swap (min[2], max[2]);
-//        Vec3i min(minBounds[0] + buffer_.voxels_size.x,
-//                  minBounds[1] + buffer_.voxels_size.y,
-//                  minBounds[2] + buffer_.voxels_size.z);
-//        Vec3i max(maxBounds[0] + buffer_.voxels_size.x,
-//                  maxBounds[1] + buffer_.voxels_size.y,
-//                  maxBounds[2] + buffer_.voxels_size.z);
-        Vec3i globalMin(min[0] + global_shift_[0],
-                        min[1] + global_shift_[1],
-                        min[2] + global_shift_[2]);
-        Vec3i globalMax(max[0] + global_shift_[0],
-                        max[1] + global_shift_[1],
-                        max[2] + global_shift_[2]);
+        Vec3i max(511, 511, 511);
+        Vec3i min(0, 0, 0);
 
+        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2],
+                                                                   max[0] + global_shift_[0], max[1] + global_shift_[1], max[2] + global_shift_[2]);
 
         std::cout << "offset: " << offset << " globalShift: " << global_shift_ << std::endl;
         std::cout << "minBounds: " << minBounds << " maxBounds: " << maxBounds << " diff: " << maxBounds - minBounds << std::endl;
-        std::cout << "globalMin: " << globalMin << " globalMax: " << globalMax << " diff: " << globalMax - globalMin << std::endl;
-        std::cout << "min: " << min << " max: " << max << " diff: " << max - min << std::endl;
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(min[0], min[1], min[2], max[0], max[1], max[2]);
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(globalMin[0], globalMin[1], globalMin[2],
-//                                                                   globalMax[0], globalMax[1], globalMax[2]);
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(minBounds[0], minBounds[1], minBounds[2],
-//                                                                   maxBounds[0], maxBounds[1], maxBounds[2]);
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0, 0, 416, 512, 512, 480);
-
-//        cv::Vec3f sliceMinF(0, 0, 416);
-//        cv::Vec3f sliceMaxF(511, 511, 511);
-//        Vec3i sliceMin = cam_pose * sliceMinF;
-//        Vec3i sliceMax = cam_pose * sliceMaxF;
-//        std::cout << "sliceMin: " << sliceMin << " sliceMax: " << sliceMax << std::endl;
-//        if (sliceMin[0] > sliceMax[0])
-//            std::swap (sliceMin[0], sliceMax[0]);
-//        if (sliceMin[1] > max[1])
-//            std::swap (sliceMin[1], sliceMax[1]);
-//        if (sliceMin[2] > max[2])
-//            std::swap (sliceMin[2], sliceMax[2]);
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(sliceMin[0], sliceMin[1], sliceMin[2],
-//                                                                   sliceMax[0], sliceMax[1], sliceMax[2]);
-
-        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0 + global_shift_[0], 0 + global_shift_[1], 0 + global_shift_[2],
-                                                                   511 + global_shift_[0], 511 + global_shift_[1], 511 + global_shift_[2]);
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0 + global_shift_[0], 0 + global_shift_[1], 0 + global_shift_[2],
-//                                                                   511 + global_shift_[0], 511 + global_shift_[1], 511 + global_shift_[2]);
+        std::cout << "min: " << min << " max: " << max << " diff: " << max - min + 1 << std::endl;
 
         int center_of_bb_x = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
         int center_of_bb_y = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
@@ -229,7 +171,6 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
         std::pair<Point*, size_t> data = global_tsdf_->getData(bbox);
 		if (data.second > 0 )
         {
-            std::cout << "size: " << data.second << std::endl;
             //std::cout << "cyclical w: " << data.first->w << std::endl;
 //            Point* dataPtr = (Point *) (data.second);
 //            for (int i = 0; i < data.second; i++)
