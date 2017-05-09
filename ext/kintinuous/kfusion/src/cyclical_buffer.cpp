@@ -141,7 +141,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 
         std::cout << "offset: " << offset << " globalShift: " << global_shift_ << std::endl;
         std::cout << "minBounds: " << minBounds << " maxBounds: " << maxBounds << " diff: " << maxBounds - minBounds << std::endl;
-        std::cout << "min: " << min << " max: " << max << " diff: " << max - min + 1 << std::endl;
+        std::cout << "min: " << min << " max: " << max << " diff: " << max - min << std::endl;
 
         int center_of_bb_x = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
         int center_of_bb_y = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
