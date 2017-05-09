@@ -75,8 +75,8 @@ namespace lvr
 
 //            /* test sphere */
 //            bool debug = true;
-//            VertexT center((bbMax.x - bbMin.x) / 2, (bbMax.y - bbMin.y) / 2, (bbMax.z - bbMin.z) / 2);
-//            float radius = 2.f;
+//            VertexT center((bbMax.x - bbMin.x) / 2 + bbMin.x, (bbMax.y - bbMin.y) / 2  + bbMin.y, (bbMax.z - bbMin.z) / 2 + bbMin.z);
+//            float radius = 0.8f;
 //
 //            std::ofstream sphereFile;
 //            if (debug)
@@ -85,6 +85,8 @@ namespace lvr
 //                time_t now = time(0);
 //                strftime(sphereFileName, sizeof(sphereFileName), "sphere_%Y%m%d_%H%M%S.3d", localtime(&now));
 //                sphereFile.open(sphereFileName);
+//                /* prevent empty files */
+//                sphereFile << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << std::endl;
 //            }
 //
 //            //#pragma omp parallel for
@@ -105,12 +107,9 @@ namespace lvr
 //
 //                        if (debug)
 //                        {
-//                            if (distance <= 1.f)
-//                            {
-//                                sphereFile << x
-//                                           << " " << y
-//                                           << " " << z;
-//                            }
+//                            sphereFile << x
+//                                       << " " << y
+//                                       << " " << z;
 //                            if (distance >= 0.f && distance <= 1.f)
 //                            {
 //                                sphereFile << " " << 255
@@ -130,6 +129,13 @@ namespace lvr
 //                                sphereFile << " " << 255
 //                                           << " " << 255
 //                                           << " " << 255
+//                                           << std::endl;
+//                            }
+//                            else
+//                            {
+//                                sphereFile << " " << 125
+//                                           << " " << 125
+//                                           << " " << 125
 //                                           << std::endl;
 //                            }
 //                        }
