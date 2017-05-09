@@ -2,6 +2,7 @@
 #include <kfusion/cuda/texture_binder.hpp>
 #include <kfusion/tsdf_buffer.h>
 #include <stdio.h>
+#include <cmath>
 
 
 using namespace kfusion::device;
@@ -199,6 +200,29 @@ namespace kfusion
         {
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+//            /* test sphere */
+//            float radius = 2.f;
+//            float voxelSize = 0.00585938;
+//            TsdfVolume::elem_type* vptr = tsdf.beg(x, y);
+//            for (int z = 0; z < tsdf.dims.z; ++z, vptr = tsdf.zstep(vptr))
+//            {
+//                if (x < tsdf.dims.x && y < tsdf.dims.y)
+//                {
+//                    ushort2* pos = const_cast<ushort2*> (vptr);
+//
+//                    shift_tsdf_pointer (&pos, buffer);
+//
+//                    float distance = sqrt((float) (x - 256) * (x - 256) * voxelSize
+//                                          + (y - 256) * (y - 256) * voxelSize
+//                                          + (z - 256) * (z - 256) * voxelSize)
+//                                     - radius;
+//                    float tsdfValue = (distance >= -1.f && distance <= 1.f) ? distance : 0.f;
+//                    int weight = tsdf.max_weight;
+//                    gmem::StCs(pack_tsdf(tsdfValue, weight), pos);
+//                }
+//            }
+//            /* test sphere */
 
             int zStepSize = (maxBounds.y - minBounds.y) * (maxBounds.x - minBounds.x);
             int yStepSize = (maxBounds.x - minBounds.x);
