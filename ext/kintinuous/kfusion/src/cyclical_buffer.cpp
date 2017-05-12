@@ -133,8 +133,8 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
         // TODO: integrate existing GlobalTSDFData here
 
         // Calculate bounding box
-        Vec3i max(511, 511, 511);
-        Vec3i min(0, 0, 0);
+        Vec3i min(280, 280, 280);
+        Vec3i max(330, 330, 330);
 
         lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2],
                                                                    max[0] + global_shift_[0], max[1] + global_shift_[1], max[2] + global_shift_[2]);
@@ -171,36 +171,92 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
         std::pair<Point*, size_t> data = global_tsdf_->getData(bbox);
 		if (data.second > 0 )
         {
-            //std::cout << "cyclical w: " << data.first->w << std::endl;
-//            Point* dataPtr = (Point *) (data.second);
-//            for (int i = 0; i < data.second; i++)
-//            {
-//                std::cout << "data: (" << data.first->x << ", " << data.first->y << ", " << data.first->z << ", " << data.first->w << ")" << std::endl;
-//                data.first++;
-//            }
+            // prepare data for integration in device buffer
+            DeviceArray<Point> integrationCloud(data.second);
+            integrationCloud.upload(data.first, data.second);
 
-//            int zStepSize = (max[1] - min[1]) * (max[0] - min[0]);
-//            int yStepSize = (max[0] - min[0]);
-//            for (int z = min[2]; z < max[2]; z++)
-//            {
-//                for (int y = min[1]; y < max[1]; y++)
+            cv::Mat integration_cloud_slice(1, (int)integrationCloud.size(), CV_32FC4);
+            integrationCloud.download(integration_cloud_slice.ptr<Point>());
+
+            Point* integration_ptr = integration_cloud_slice.ptr<Point>();
+            if(integrationCloud.size() > 0 && integration_ptr != NULL)
+            {
+                std::cout << "integrationClout size: " << integrationCloud.size() << std::endl;
+                std::ofstream integrationCloudFile;
+                std::string fileName("integration_cloud_" + std::to_string(slice_count_) + ".3d");
+                integrationCloudFile.open(fileName);
+                for (int i = 0; i < integrationCloud.size(); i++)
+                {
+                    float distance = integration_ptr->w;
+                    if (distance != 0.f)
+                    {
+                        integrationCloudFile << integration_ptr->x
+                                             << " " << integration_ptr->y
+                                             << " " << integration_ptr->z;
+                        if (distance >= 0.f && distance <= 1.f)
+                        {
+                            integrationCloudFile << " " << 255
+                                                 << " " << 0
+                                                 << " " << 0
+                                                 << std::endl;
+                        }
+                        else if (distance >= -1.f && distance < 0.f)
+                        {
+                            integrationCloudFile << " " << 0
+                                                 << " " << 255
+                                                 << " " << 0
+                                                 << std::endl;
+                        }
+                    }
+                    integration_ptr++;
+                }
+
+//                int yStepSize = max[0] - min[0] + 1;
+//                int zStepSize = (max[0] - min[1] + 1) * yStepSize;
+//                for(int x = 0; x < 512; ++x)
 //                {
-//                    for (int x = min[0]; x < max[0]; x++)
+//                    for(int y = 0; y < 512; ++y)
 //                    {
-//                        Point* dataPtr = (Point *) (data.first + z * zStepSize + y * yStepSize + x);
-//                        std::cout << "data: (" << dataPtr->x
-//                                  << ", " << dataPtr->y
-//                                  << ", " << dataPtr->z
-//                                  << ", " << dataPtr->w
-//                                  << ")" << std::endl;
+//                        for (int z = 0; z < 512; ++z)
+//                        {
+//                            bool inBounds = (
+//                                    (x >= min[0] && x <= max[0]) &&
+//                                    (y >= min[1] && y <= max[1]) &&
+//                                    (z >= min[2] && z <= max[2])
+//                            );
+//
+//                            if (inBounds)
+//                            {
+//                                Point* localPtr = (integration_ptr + (z - min[2]) * zStepSize + (y - min[1]) * yStepSize + (x - min[0]));
+//                                float distance = localPtr->w;
+//                                if (distance >= -1.f && distance <= 1.f && distance != 0.f)
+//                                {
+//                                    integrationCloudFile << localPtr->x
+//                                                         << " " << localPtr->y
+//                                                         << " " << localPtr->z;
+//                                    if (distance >= 0.f && distance <= 1.f)
+//                                    {
+//                                        integrationCloudFile << " " << 255
+//                                                             << " " << 0
+//                                                             << " " << 0
+//                                                             << std::endl;
+//                                    }
+//                                    else if (distance >= -1.f && distance < 0.f)
+//                                    {
+//                                        integrationCloudFile << " " << 0
+//                                                             << " " << 255
+//                                                             << " " << 0
+//                                                             << std::endl;
+//                                    }
+//                                }
+//                            }
+//                        }
 //                    }
 //                }
-//            }
-            // prepare data for integration in device buffer
-//            DeviceArray<Point> integrationCloud(data.second);
-//            integrationCloud.upload(data.first, data.second);
+                integrationCloudFile.close();
+            }
 
-//            volume->integrateSlice(&buffer_, integrationCloud, min, max, global_shift_);
+            volume->integrateSlice(&buffer_, integrationCloud, min, max, global_shift_);
         }
 	}
     if (last_shift)

@@ -43,7 +43,7 @@ namespace lvr
         VertexT bbMax = bb.getMax();
 
         // calculate tsdf size
-        int stepSize = 5;
+        int stepSize = 1;
         size_t tsdfSize = ((int) abs(bbMax.x - bbMin.x + 1) / stepSize) * ((int) abs(bbMax.y - bbMin.y + 1) / stepSize) * ((int) abs(bbMax.z - bbMin.z + 1) / stepSize);
         cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
         cv::Mat tsdfValues(1, tsdfSize, CV_32FC4);
