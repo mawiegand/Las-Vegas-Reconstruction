@@ -224,34 +224,33 @@ namespace kfusion
 //            }
 //            /* test sphere */
 
-            int zStepSize = (maxBounds.y - minBounds.y) * (maxBounds.x - minBounds.x);
-            int yStepSize = (maxBounds.x - minBounds.x);
+            int yStepSize = maxBounds.x - minBounds.x + 1;
+            int zStepSize = (maxBounds.y - minBounds.y + 1) * yStepSize;
 
             TsdfVolume::elem_type* vptr = tsdf.beg(x, y);
             for (int z = 0; z < tsdf.dims.z; ++z, vptr = tsdf.zstep(vptr))
             {
-                // The black zone is the name given to the subvolume within the TSDF Volume grid that is shifted out.
-                // In other words, the set of points in the TSDF grid that we want to extract in order to add it to the world model being built in CPU.
-                bool inBlackZone = (
+                bool inBounds = (
                         (x >= minBounds.x && x <= maxBounds.x) &&
                         (y >= minBounds.y && y <= maxBounds.y) &&
                         (z >= minBounds.z && z <= maxBounds.z)
                 );
 
-                if (x < tsdf.dims.x && y < tsdf.dims.y && inBlackZone)
+                if (x < tsdf.dims.x && y < tsdf.dims.y && inBounds)
                 {
                     ushort2* pos = const_cast<ushort2*> (vptr);
 
                     shift_tsdf_pointer (&pos, buffer);
 
-                    //float tsdfValue = z % 2 == 0 ? 0.0001f : - 0.0001f;
-                    //float tsdfValue = z % 2 == 0 ? deviceData.data->w : -deviceData.data->w;
-                    float tsdfValue = (deviceData.data + z * zStepSize + y * yStepSize + x)->w;
+                    float tsdfValue = (deviceData.data + (z - minBounds.z) * zStepSize + (y - minBounds.y) * yStepSize + (x - minBounds.x))->w;
 # if __CUDA_ARCH__>=200
-                    //if ((z == 0 || z == 1) && tsdfValue != 0.f) printf("TSDF-Value: %f \n", tsdfValue);
+//                    if (tsdfValue != 0.f) printf("TSDF-Value: %f \n", tsdfValue);
 #endif
                     int weight = tsdf.max_weight;
-                    gmem::StCs(pack_tsdf(tsdfValue, weight), pos);
+                    if (tsdfValue != 0.f)
+                    {
+                        gmem::StCs(pack_tsdf(tsdfValue, weight), pos);
+                    }
                 }
             }
 
@@ -357,10 +356,6 @@ void kfusion::device::integrateSlice(TsdfVolume& volume, tsdf_buffer* buffer, co
     dim3 grid (1, 1, 1);
     grid.x = divUp (buffer->voxels_size.x, block.x);
     grid.y = divUp (buffer->voxels_size.y, block.y);
-
-    printf("minBounds: (%d, %d, %d)\n", minBounds.x, minBounds.y, minBounds.z);
-    printf("maxBounds: (%d, %d, %d)\n", maxBounds.x, maxBounds.y, maxBounds.z);
-    printf("diff: (%d, %d, %d)\n", maxBounds.x - minBounds.x, maxBounds.y - minBounds.y, maxBounds.z - minBounds.z);
 
     integrateSliceKernel<<<grid, block>>>(volume, *buffer, minBounds, maxBounds, deviceData);
     cudaSafeCall ( cudaGetLastError () );
