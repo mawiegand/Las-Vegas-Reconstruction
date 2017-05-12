@@ -159,11 +159,11 @@ namespace lvr
                 file.open(fileName);
 
                 //#pragma omp parallel for
-                for(int x = (int) (bbMin.x + center_of_bb_x  + stepSize - 1); x <= (int) (bbMax.x + center_of_bb_x); x += stepSize)
+                for (int z = (int) (bbMin.z + center_of_bb_z + stepSize - 1); z <= (int) (bbMax.z + center_of_bb_z); z += stepSize)
                 {
                     for (int y = (int) (bbMin.y + center_of_bb_y + stepSize - 1); y <= (int) (bbMax.y + center_of_bb_y); y += stepSize)
                     {
-                        for (int z = (int) (bbMin.z + center_of_bb_z + stepSize - 1); z <= (int) (bbMax.z + center_of_bb_z); z += stepSize)
+                        for(int x = (int) (bbMin.x + center_of_bb_x  + stepSize - 1); x <= (int) (bbMax.x + center_of_bb_x); x += stepSize)
                         {
                             // TODO: catch index out of bounce
                             size_t hash = this->hashValue(x, y, z);
