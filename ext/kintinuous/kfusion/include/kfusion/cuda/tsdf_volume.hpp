@@ -71,7 +71,7 @@ namespace kfusion
 
             DeviceArray<Point> fetchCloud(DeviceArray<Point>& cloud_buffer, const tsdf_buffer& buffer) const;
             void fetchNormals(const DeviceArray<Point>& cloud, const tsdf_buffer& buffer, DeviceArray<Normal>& normals) const;
-            void integrateSlice (kfusion::tsdf_buffer* buffer, DeviceArray<Point>& data, const Vec3i minBounds, const Vec3i maxBounds, const Vec3i globalShift) const;
+            void integrateSlice (kfusion::tsdf_buffer* buffer, DeviceArray<float>& data, const Vec3i minBounds, const Vec3i maxBounds, const Vec3i globalShift) const;
 
             struct Entry
             {

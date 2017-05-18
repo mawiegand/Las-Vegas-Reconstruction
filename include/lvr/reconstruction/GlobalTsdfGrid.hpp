@@ -30,7 +30,7 @@ namespace lvr
         typedef typename unordered_map<size_t, BoxT *>::iterator box_map_it;
 
         GlobalTsdfGrid(float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize);
-        pair<TsdfT*, size_t> getData(BoundingBox<VertexT> bb);
+        pair<float*, size_t> getData(BoundingBox<VertexT> bb);
         bool addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift);
         virtual void addLatticePoint(int index_x, int index_y, int index_z, float distance = 0);
         void saveMesh(string filename);

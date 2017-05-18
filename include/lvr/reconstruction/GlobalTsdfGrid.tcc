@@ -12,6 +12,8 @@
 #include <lvr/reconstruction/FastReconstruction.hpp>
 #include <lvr/geometry/HalfEdgeKinFuMesh.hpp>
 
+#define DEBUG 0
+
 namespace lvr
 {
     typedef ColorVertex<float, unsigned char> cVertex;
@@ -31,7 +33,7 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    pair<TsdfT*, size_t> GlobalTsdfGrid<VertexT, BoxT, TsdfT>::getData(BoundingBox<VertexT> bb)
+    pair<float*, size_t> GlobalTsdfGrid<VertexT, BoxT, TsdfT>::getData(BoundingBox<VertexT> bb)
     {
         std::cout << "get data from global TSDF" << std::endl;
 
@@ -46,9 +48,8 @@ namespace lvr
         int stepSize = 1;
         size_t tsdfSize = ((int) abs(bbMax.x - bbMin.x + 1) / stepSize) * ((int) abs(bbMax.y - bbMin.y + 1) / stepSize) * ((int) abs(bbMax.z - bbMin.z + 1) / stepSize);
         cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
-        cv::Mat tsdfValues(1, tsdfSize, CV_32FC4);
 
-        TsdfT* tsdf = tsdfValues.ptr<TsdfT>();
+        float* tsdf = new float[tsdfSize];
 
         if (tsdf != NULL)
         {
@@ -74,20 +75,19 @@ namespace lvr
             }*/
 
 //            /* test sphere */
-//            bool debug = true;
 //            VertexT center((bbMax.x - bbMin.x) / 2 + bbMin.x, (bbMax.y - bbMin.y) / 2  + bbMin.y, (bbMax.z - bbMin.z) / 2 + bbMin.z);
 //            float radius = 0.8f;
 //
 //            std::ofstream sphereFile;
-//            if (debug)
-//            {
-//                static char sphereFileName[26];
-//                time_t now = time(0);
-//                strftime(sphereFileName, sizeof(sphereFileName), "sphere_%Y%m%d_%H%M%S.3d", localtime(&now));
-//                sphereFile.open(sphereFileName);
-//                /* prevent empty files */
-//                sphereFile << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << std::endl;
-//            }
+//
+//#if DEBUG
+//            static char sphereFileName[26];
+//            time_t now = time(0);
+//            strftime(sphereFileName, sizeof(sphereFileName), "sphere_%Y%m%d_%H%M%S.3d", localtime(&now));
+//            sphereFile.open(sphereFileName);
+//            /* prevent empty files */
+//            sphereFile << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << std::endl;
+//#endif
 //
 //            //#pragma omp parallel for
 //            for (int z = (int) (bbMin.z + stepSize - 1); z <= (int) bbMax.z; z += stepSize)
@@ -100,63 +100,59 @@ namespace lvr
 //                                              + pow((y - center.y), 2) * this->m_voxelsize
 //                                              + pow((z - center.z), 2) * this->m_voxelsize)
 //                                         - radius;
-//                        tsdf[tsdfIndex].x = x;
-//                        tsdf[tsdfIndex].y = y;
-//                        tsdf[tsdfIndex].z = z;
-//                        tsdf[tsdfIndex].w = (distance >= -1.f && distance <= 1.f) ? distance : 0.f;
+//                        tsdf[tsdfIndex] = (distance >= -1.f && distance <= 1.f) ? distance : 0.f;
 //
-//                        if (debug)
+//#if DEBUG
+//                        sphereFile << x
+//                                   << " " << y
+//                                   << " " << z;
+//                        if (distance >= 0.f && distance <= 1.f)
 //                        {
-//                            sphereFile << x
-//                                       << " " << y
-//                                       << " " << z;
-//                            if (distance >= 0.f && distance <= 1.f)
-//                            {
-//                                sphereFile << " " << 255
-//                                           << " " << 0
-//                                           << " " << 0
-//                                           << std::endl;
-//                            }
-//                            else if (distance >= -1.f && distance < 0.f)
-//                            {
-//                                sphereFile << " " << 0
-//                                           << " " << 255
-//                                           << " " << 0
-//                                           << std::endl;
-//                            }
-//                            else if (distance < -1.f)
-//                            {
-//                                sphereFile << " " << 255
-//                                           << " " << 255
-//                                           << " " << 255
-//                                           << std::endl;
-//                            }
-//                            else
-//                            {
-//                                sphereFile << " " << 125
-//                                           << " " << 125
-//                                           << " " << 125
-//                                           << std::endl;
-//                            }
+//                            sphereFile << " " << 255
+//                                       << " " << 0
+//                                       << " " << 0
+//                                       << std::endl;
 //                        }
+//                        else if (distance >= -1.f && distance < 0.f)
+//                        {
+//                            sphereFile << " " << 0
+//                                       << " " << 255
+//                                       << " " << 0
+//                                       << std::endl;
+//                        }
+//                        else if (distance < -1.f)
+//                        {
+//                            sphereFile << " " << 255
+//                                       << " " << 255
+//                                       << " " << 255
+//                                       << std::endl;
+//                        }
+//                        else
+//                        {
+//                            sphereFile << " " << 125
+//                                       << " " << 125
+//                                       << " " << 125
+//                                       << std::endl;
+//                        }
+//#endif
 //                        tsdfIndex++;
 //                    }
 //                }
 //            }
-//            if (debug)
-//            {
-//                sphereFile.close();
-//            }
+//#if DEBUG
+//            sphereFile.close();
+//#endif
 //            /* test sphere */
 
             if (this->m_qpIndices.size() > 0)
             {
+                std::ofstream file;
+#if DEBUG
                 static char fileName[23];
                 time_t now = time(0);
                 strftime(fileName, sizeof(fileName), "get_%Y%m%d_%H%M%S.3d", localtime(&now));
-
-                std::ofstream file;
                 file.open(fileName);
+#endif
 
                 //#pragma omp parallel for
                 for (int z = (int) (bbMin.z + center_of_bb_z + stepSize - 1); z <= (int) (bbMax.z + center_of_bb_z); z += stepSize)
@@ -171,41 +167,42 @@ namespace lvr
                             {
                                 size_t gridIndex = this->m_qpIndices.at(hash);
                                 QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
-                                VertexT position = qp.m_position;
-                                tsdf[tsdfIndex].x = position.x - center_of_bb_x;
-                                tsdf[tsdfIndex].y = position.y - center_of_bb_y;
-                                tsdf[tsdfIndex].z = position.z - center_of_bb_z;
-                                tsdf[tsdfIndex].w = qp.m_distance;
+                                tsdf[tsdfIndex] = qp.m_distance;
                             }
                             catch (const std::out_of_range &oor)
                             {
-                                tsdf[tsdfIndex].x = x - center_of_bb_x;
-                                tsdf[tsdfIndex].y = y - center_of_bb_y;
-                                tsdf[tsdfIndex].z = z - center_of_bb_z;
-                                tsdf[tsdfIndex].w = 0.f;
+                                tsdf[tsdfIndex] = 0.f;
                             }
-                            file << tsdf[tsdfIndex].x
-                                 << " " << tsdf[tsdfIndex].y
-                                 << " " << tsdf[tsdfIndex].z;
-                            if (tsdf[tsdfIndex].w > 0.f )
+
+#if DEBUG
+                            if (tsdf[tsdfIndex] != 0.f)
                             {
-                                file << " " << 0 << " " << 0 << " " << 255;
+                                file << x - center_of_bb_x
+                                     << " " << y - center_of_bb_y
+                                     << " " << z - center_of_bb_z;
+                                if (tsdf[tsdfIndex] > 0.f)
+                                {
+                                    file << " " << 0 << " " << 0 << " " << 255;
+                                }
+                                else if (tsdf[tsdfIndex] < 0.f)
+                                {
+                                    file << " " << 255 << " " << 0 << " " << 0;
+                                }
+                                file << std::endl;
                             }
-                            else
-                            {
-                                file << " " << 255 << " " << 0 << " " << 0;
-                            }
-                            file << std::endl;
+#endif
                             tsdfIndex++;
                         }
                     }
                 }
+#if DEBUG
                 file.close();
+#endif
             }
         }
         cout << timestamp << "Finished getting data from global TSDF" << endl;
 
-        return pair<TsdfT*, size_t>(tsdf, tsdfSize);
+        return pair<float*, size_t>(tsdf, tsdfSize);
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>

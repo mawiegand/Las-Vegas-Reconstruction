@@ -110,7 +110,7 @@ namespace kfusion
         void clearTSDFSlice (const TsdfVolume& volume, const kfusion::tsdf_buffer* buffer, const Vec3i offset);
         void integrate(const Dists& depth, TsdfVolume& volume, tsdf_buffer& buffer, const Aff3f& aff, const Projector& proj);
         void integrateSlice(TsdfVolume& volume, kfusion::tsdf_buffer* buffer, const Vec3i minBounds,
-                            const Vec3i maxBounds, const Vec3i globalShift, PtrSz<Point> deviceData);
+                            const Vec3i maxBounds, const Vec3i globalShift, PtrSz<float> deviceData);
 
         void raycast(const TsdfVolume& volume, tsdf_buffer& buffer, const Aff3f& aff, const Mat3f& Rinv,
                      const Reprojector& reproj, Depth& depth, Normals& normals, float step_factor, float delta_factor);

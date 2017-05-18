@@ -196,7 +196,7 @@ namespace kfusion
 
         __global__ void integrate_kernel( const TsdfIntegrator integrator, TsdfVolume volume, tsdf_buffer buffer) { integrator(volume, buffer); };
 
-        __global__ void integrateSliceKernel(TsdfVolume tsdf, tsdf_buffer buffer, int3 minBounds, int3 maxBounds, PtrSz<Point> deviceData)
+        __global__ void integrateSliceKernel(TsdfVolume tsdf, tsdf_buffer buffer, int3 minBounds, int3 maxBounds, PtrSz<float> deviceData)
         {
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -242,7 +242,7 @@ namespace kfusion
 
                     shift_tsdf_pointer (&pos, buffer);
 
-                    float tsdfValue = (deviceData.data + (z - minBounds.z) * zStepSize + (y - minBounds.y) * yStepSize + (x - minBounds.x))->w;
+                    float tsdfValue = deviceData.data[(z - minBounds.z) * zStepSize + (y - minBounds.y) * yStepSize + (x - minBounds.x)];
 # if __CUDA_ARCH__>=200
 //                    if (tsdfValue != 0.f) printf("TSDF-Value: %f \n", tsdfValue);
 #endif
@@ -345,7 +345,7 @@ void kfusion::device::integrate(const PtrStepSz<ushort>& dists, TsdfVolume& volu
 }
 
 void kfusion::device::integrateSlice(TsdfVolume& volume, tsdf_buffer* buffer, const Vec3i minBounds,
-                                     const Vec3i maxBounds, const Vec3i globalShift, PtrSz<Point> deviceData)
+                                     const Vec3i maxBounds, const Vec3i globalShift, PtrSz<float> deviceData)
 {
     /*dim3 block(32, 8);
     dim3 grid(divUp(volume.dims.x, block.x), divUp(volume.dims.y, block.y));
