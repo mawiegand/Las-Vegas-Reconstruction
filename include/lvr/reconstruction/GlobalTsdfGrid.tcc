@@ -23,13 +23,19 @@ namespace lvr
     typedef HMesh *MeshPtr;
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    GlobalTsdfGrid<VertexT, BoxT, TsdfT>::GlobalTsdfGrid(float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize) :
+    GlobalTsdfGrid<VertexT, BoxT, TsdfT>::GlobalTsdfGrid(size_t bufferSizeX, size_t bufferSizeY, size_t bufferSizeZ,
+                                                         float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize) :
             HashGrid<VertexT, BoxT>(cellSize, bb, isVoxelsize)
     {
-        m_sliceInQueue = boost::shared_ptr<BlockingQueue>(new BlockingQueue());
-        m_writerThread = boost::shared_ptr<boost::thread>(new boost::thread(
+        this->m_maxBufferIndexX = bufferSizeX;
+        this->m_maxBufferIndexY = bufferSizeY;
+        this->m_maxBufferIndexZ = bufferSizeZ;
+        this->m_globalBufferSize = (this->m_maxBufferIndexX + 1) * (this->m_maxBufferIndexY + 1) * (this->m_maxBufferIndexZ + 1);
+        this->m_globalBuffer = new float[this->m_globalBufferSize];
+        this->m_sliceInQueue = boost::shared_ptr<BlockingQueue>(new BlockingQueue());
+        this->m_writerThread = boost::shared_ptr<boost::thread>(new boost::thread(
                 boost::bind(&GlobalTsdfGrid<VertexT, BoxT, TsdfT>::writeSliceData, this)
-                ));
+        ));
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
@@ -37,167 +43,36 @@ namespace lvr
     {
         std::cout << "get data from global TSDF" << std::endl;
 
-        int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
-        int center_of_bb_y = (this->m_boundingBox.getYSize() / 2) / this->m_voxelsize;
-        int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
+        size_t centerOfX = this->m_maxBufferIndexX / 2;
+        size_t centerOfY = this->m_maxBufferIndexY / 2;
+        size_t centerOfZ = this->m_maxBufferIndexZ / 2;
+
+        size_t gloablStepSizeY = this->m_maxBufferIndexX + 1;
+        size_t gloablStepSizeZ = (this->m_maxBufferIndexY + 1) * gloablStepSizeY;
 
         VertexT bbMin = bb.getMin();
         VertexT bbMax = bb.getMax();
 
-        // calculate tsdf size
-        int stepSize = 1;
-        size_t tsdfSize = ((int) abs(bbMax.x - bbMin.x + 1) / stepSize) * ((int) abs(bbMax.y - bbMin.y + 1) / stepSize) * ((int) abs(bbMax.z - bbMin.z + 1) / stepSize);
-        cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
+        size_t yStep = abs(bbMax.x - bbMin.x + 1);
+        size_t zStep = abs(bbMax.y - bbMin.y + 1) * yStep;
 
+        // calculate tsdf size
+        size_t tsdfSize = abs(bbMax.x - bbMin.x + 1) * abs(bbMax.y - bbMin.y + 1) * abs(bbMax.z - bbMin.z + 1);
         float* tsdf = new float[tsdfSize];
 
-        if (tsdf != NULL)
+        cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
+
+        size_t globalOffsetX = (centerOfX + bbMin.x);
+        for (size_t z = (centerOfZ + bbMin.z); z <= (centerOfZ + bbMax.z); ++z)
         {
-            size_t tsdfIndex = 0;
-
-            // TODO: determine required order by cyclical buffer
-            /* TODO: check hash loop
-            // calculate hash values of bounding box
-            size_t minHashValue = this->hashValue(bbMin.x, bbMin.y, bbMin.z);
-            size_t maxHashValue = this->hashValue(bbMax.x, bbMax.y, bbMax.z);
-            // for each value in bounding box
-            for (size_t hash = minHashValue; hash <= maxHashValue; hash++)
+            for (size_t y = (centerOfY + bbMin.y); y <= (centerOfY + bbMax.y); ++y)
             {
-                // TODO: catch index out of bounce
-                int gridIndex = this->m_qpIndices[hash];
-                QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
-                VertexT position = qp.m_position;
-                tsdf[tsdfIndex].x = position.x - center_of_bb_x;
-                tsdf[tsdfIndex].y = position.y - center_of_bb_y;
-                tsdf[tsdfIndex].z = position.z - center_of_bb_z;
-                tsdf[tsdfIndex].w = qp.m_distance;
-                tsdfIndex++;
-            }*/
-
-//            /* test sphere */
-//            VertexT center((bbMax.x - bbMin.x) / 2 + bbMin.x, (bbMax.y - bbMin.y) / 2  + bbMin.y, (bbMax.z - bbMin.z) / 2 + bbMin.z);
-//            float radius = 0.8f;
-//
-//            std::ofstream sphereFile;
-//
-//#if DEBUG
-//            static char sphereFileName[26];
-//            time_t now = time(0);
-//            strftime(sphereFileName, sizeof(sphereFileName), "sphere_%Y%m%d_%H%M%S.3d", localtime(&now));
-//            sphereFile.open(sphereFileName);
-//            /* prevent empty files */
-//            sphereFile << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << std::endl;
-//#endif
-//
-//            //#pragma omp parallel for
-//            for (int z = (int) (bbMin.z + stepSize - 1); z <= (int) bbMax.z; z += stepSize)
-//            {
-//                for (int y = (int) (bbMin.y + stepSize - 1); y <= (int) bbMax.y; y += stepSize)
-//                {
-//                    for (int x = (int) (bbMin.x + stepSize - 1); x <= (int) bbMax.x; x += stepSize)
-//                    {
-//                        float distance = sqrt(pow((x - center.x), 2) * this->m_voxelsize
-//                                              + pow((y - center.y), 2) * this->m_voxelsize
-//                                              + pow((z - center.z), 2) * this->m_voxelsize)
-//                                         - radius;
-//                        tsdf[tsdfIndex] = (distance >= -1.f && distance <= 1.f) ? distance : 0.f;
-//
-//#if DEBUG
-//                        sphereFile << x
-//                                   << " " << y
-//                                   << " " << z;
-//                        if (distance >= 0.f && distance <= 1.f)
-//                        {
-//                            sphereFile << " " << 255
-//                                       << " " << 0
-//                                       << " " << 0
-//                                       << std::endl;
-//                        }
-//                        else if (distance >= -1.f && distance < 0.f)
-//                        {
-//                            sphereFile << " " << 0
-//                                       << " " << 255
-//                                       << " " << 0
-//                                       << std::endl;
-//                        }
-//                        else if (distance < -1.f)
-//                        {
-//                            sphereFile << " " << 255
-//                                       << " " << 255
-//                                       << " " << 255
-//                                       << std::endl;
-//                        }
-//                        else
-//                        {
-//                            sphereFile << " " << 125
-//                                       << " " << 125
-//                                       << " " << 125
-//                                       << std::endl;
-//                        }
-//#endif
-//                        tsdfIndex++;
-//                    }
-//                }
-//            }
-//#if DEBUG
-//            sphereFile.close();
-//#endif
-//            /* test sphere */
-
-            if (this->m_qpIndices.size() > 0)
-            {
-                std::ofstream file;
-#if DEBUG
-                static char fileName[23];
-                time_t now = time(0);
-                strftime(fileName, sizeof(fileName), "get_%Y%m%d_%H%M%S.3d", localtime(&now));
-                file.open(fileName);
-#endif
-
-                //#pragma omp parallel for
-                for (int z = (int) (bbMin.z + center_of_bb_z + stepSize - 1); z <= (int) (bbMax.z + center_of_bb_z); z += stepSize)
-                {
-                    for (int y = (int) (bbMin.y + center_of_bb_y + stepSize - 1); y <= (int) (bbMax.y + center_of_bb_y); y += stepSize)
-                    {
-                        for(int x = (int) (bbMin.x + center_of_bb_x  + stepSize - 1); x <= (int) (bbMax.x + center_of_bb_x); x += stepSize)
-                        {
-                            // TODO: catch index out of bounce
-                            size_t hash = this->hashValue(x, y, z);
-                            try
-                            {
-                                size_t gridIndex = this->m_qpIndices.at(hash);
-                                QueryPoint<VertexT> qp = this->m_queryPoints[gridIndex];
-                                tsdf[tsdfIndex] = qp.m_distance;
-                            }
-                            catch (const std::out_of_range &oor)
-                            {
-                                tsdf[tsdfIndex] = 0.f;
-                            }
-
-#if DEBUG
-                            if (tsdf[tsdfIndex] != 0.f)
-                            {
-                                file << x - center_of_bb_x
-                                     << " " << y - center_of_bb_y
-                                     << " " << z - center_of_bb_z;
-                                if (tsdf[tsdfIndex] > 0.f)
-                                {
-                                    file << " " << 0 << " " << 0 << " " << 255;
-                                }
-                                else if (tsdf[tsdfIndex] < 0.f)
-                                {
-                                    file << " " << 255 << " " << 0 << " " << 0;
-                                }
-                                file << std::endl;
-                            }
-#endif
-                            tsdfIndex++;
-                        }
-                    }
-                }
-#if DEBUG
-                file.close();
-#endif
+                size_t hash = z * gloablStepSizeZ + y * gloablStepSizeY + globalOffsetX;
+                memcpy(
+                        &tsdf[(size_t)((z - centerOfZ - bbMin.z) * zStep + (y - centerOfY - bbMin.y) * yStep)],
+                        &(this->m_globalBuffer[hash]),
+                        yStep * sizeof(float)
+                );
             }
         }
         cout << timestamp << "Finished getting data from global TSDF" << endl;
@@ -227,36 +102,22 @@ namespace lvr
     {
         cout << timestamp << "Started adding data to global TSDF " << "Values: " << size << endl;
 
-        int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
-        int center_of_bb_y = (this->m_boundingBox.getYSize() / 2) / this->m_voxelsize;
-        int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
+        size_t centerOfX = this->m_maxBufferIndexX / 2;
+        size_t centerOfY = this->m_maxBufferIndexY / 2;
+        size_t centerOfZ = this->m_maxBufferIndexZ / 2;
 
-        //#pragma omp parallllell for
-        int grid_index = 0;
-        size_t last_size = this->m_queryPoints.size();
-        this->m_queryPoints.resize(size + last_size);
+        size_t yStepSize = this->m_maxBufferIndexX + 1;
+        size_t zStepSize = (this->m_maxBufferIndexY + 1) * yStepSize;
+
         for (size_t i = 0; i < size; i++)
         {
-            grid_index = i + last_size;
             // shift tsdf onto global grid
-            int global_x = tsdf[i].x + center_of_bb_x;
-            int global_y = tsdf[i].y + center_of_bb_y;
-            int global_z = tsdf[i].z + center_of_bb_z;
-            VertexT position(global_x, global_y, global_z);
-            QueryPoint<VertexT> qp = QueryPoint<VertexT>(position, tsdf[i].w);
-            this->m_queryPoints[grid_index] = qp;
-            size_t hash_value = this->hashValue(global_x, global_y, global_z);
-            this->m_qpIndices[hash_value] = grid_index;
-        }
-        this->m_globalIndex = grid_index + 1;
-        // Iterator over all points, calc lattice indices and add lattice points to the grid
-        for (size_t i = 0; i < size; i++)
-        {
-            int global_x = tsdf[i].x + center_of_bb_x;
-            int global_y = tsdf[i].y + center_of_bb_y;
-            int global_z = tsdf[i].z + center_of_bb_z;
-            //#pragma omp task
-            addLatticePoint(global_x, global_y, global_z, tsdf[i].w);
+            size_t globalX = tsdf[i].x + centerOfX;
+            size_t globalY = tsdf[i].y + centerOfY;
+            size_t globalZ = tsdf[i].z + centerOfZ;
+
+            size_t bufferIndex = globalZ * zStepSize + globalY * yStepSize + globalX;
+            this->m_globalBuffer[bufferIndex] = tsdf[i].w;
         }
         cout << timestamp << "Finished adding data to global TSDF" << endl;
 
@@ -356,8 +217,11 @@ namespace lvr
 
         //global_tsdf_->saveGrid("global_tsdf.grid");
 
-        // if debugging enabled
+        // TODO: transform buffer to grid
+
+#if DEBUG
         exportGlobalTSDFValues();
+#endif
 
         // create mesh
         MeshPtr meshPtr = new HMesh();
@@ -413,5 +277,6 @@ namespace lvr
     template<typename VertexT, typename BoxT, typename TsdfT>
     GlobalTsdfGrid<VertexT, BoxT, TsdfT>::~GlobalTsdfGrid()
     {
+        delete[] this->m_globalBuffer;
     }
 }

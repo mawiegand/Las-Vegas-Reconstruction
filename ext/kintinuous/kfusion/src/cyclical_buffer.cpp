@@ -135,7 +135,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
         // Calculate bounding box
 //        Vec3i min(280, 280, 280);
 //        Vec3i max(330, 330, 330);
-        Vec3i min(0, 0, 447);
+        Vec3i min(0, 0, 0);
         Vec3i max(511, 511, 511);
 
         lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2],

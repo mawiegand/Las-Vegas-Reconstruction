@@ -23,13 +23,20 @@ namespace lvr
         boost::shared_ptr<boost::thread> m_writerThread;
         boost::shared_ptr<BlockingQueue> m_sliceInQueue;
 
+        size_t m_maxBufferIndexX;
+        size_t m_maxBufferIndexY;
+        size_t m_maxBufferIndexZ;
+        size_t m_globalBufferSize;
+        float* m_globalBuffer;
+
         void writeSliceData();
         bool integrateSliceData(TsdfT *tsdf, size_t size);
     public:
         // Typedef to alias iterators for box maps
         typedef typename unordered_map<size_t, BoxT *>::iterator box_map_it;
 
-        GlobalTsdfGrid(float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize);
+        GlobalTsdfGrid(size_t bufferSizeX, size_t bufferSizeY, size_t bufferSizeZ,
+                       float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize);
         pair<float*, size_t> getData(BoundingBox<VertexT> bb);
         bool addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift);
         virtual void addLatticePoint(int index_x, int index_y, int index_z, float distance = 0);
