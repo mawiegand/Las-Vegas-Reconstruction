@@ -26,7 +26,10 @@ namespace lvr
         size_t m_maxBufferIndexX;
         size_t m_maxBufferIndexY;
         size_t m_maxBufferIndexZ;
+        /* count of buffer elements */
         size_t m_globalBufferSize;
+        /* count of buffer elements != 0 */
+        size_t m_insertedBufferElements;
         float* m_globalBuffer;
 
         void writeSliceData();

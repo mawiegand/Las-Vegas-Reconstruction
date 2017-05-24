@@ -32,6 +32,7 @@ namespace lvr
         this->m_maxBufferIndexZ = bufferSizeZ;
         this->m_globalBufferSize = (this->m_maxBufferIndexX + 1) * (this->m_maxBufferIndexY + 1) * (this->m_maxBufferIndexZ + 1);
         this->m_globalBuffer = new float[this->m_globalBufferSize];
+        this->m_insertedBufferElements = 0;
         this->m_sliceInQueue = boost::shared_ptr<BlockingQueue>(new BlockingQueue());
         this->m_writerThread = boost::shared_ptr<boost::thread>(new boost::thread(
                 boost::bind(&GlobalTsdfGrid<VertexT, BoxT, TsdfT>::writeSliceData, this)
@@ -63,6 +64,9 @@ namespace lvr
         cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
 
         size_t globalOffsetX = (centerOfX + bbMin.x);
+
+//        #pragma omp parallel for
+//        for (size_t z = (size_t)(centerOfZ + bbMin.z); z <= (size_t) (centerOfZ + bbMax.z); ++z)
         for (size_t z = (centerOfZ + bbMin.z); z <= (centerOfZ + bbMax.z); ++z)
         {
             for (size_t y = (centerOfY + bbMin.y); y <= (centerOfY + bbMax.y); ++y)
@@ -118,6 +122,10 @@ namespace lvr
 
             size_t bufferIndex = globalZ * zStepSize + globalY * yStepSize + globalX;
             this->m_globalBuffer[bufferIndex] = tsdf[i].w;
+            if (tsdf[i].w != 0.f)
+            {
+                this->m_insertedBufferElements++;
+            }
         }
         cout << timestamp << "Finished adding data to global TSDF" << endl;
 
@@ -218,6 +226,69 @@ namespace lvr
         //global_tsdf_->saveGrid("global_tsdf.grid");
 
         // TODO: transform buffer to grid
+        cout << timestamp << "Transforming data" << "Values: " << this->m_globalBufferSize << endl;
+
+        int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
+        int center_of_bb_y = (this->m_boundingBox.getYSize() / 2) / this->m_voxelsize;
+        int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
+
+        size_t centerOfBufferX = this->m_maxBufferIndexX / 2;
+        size_t centerOfBufferY = this->m_maxBufferIndexY / 2;
+        size_t centerOfBufferZ = this->m_maxBufferIndexZ / 2;
+
+        size_t gloablStepSizeY = this->m_maxBufferIndexX + 1;
+        size_t gloablStepSizeZ = (this->m_maxBufferIndexY + 1) * gloablStepSizeY;
+
+        //#pragma omp parallllell for
+        size_t last_size = this->m_queryPoints.size();
+        int grid_index = last_size;
+        this->m_queryPoints.resize(this->m_insertedBufferElements + last_size);
+        for (size_t z = 0; z <= this->m_maxBufferIndexZ; ++z)
+        {
+            for (size_t y = 0; y <= this->m_maxBufferIndexY; ++y)
+            {
+                for (size_t x = 0; x <= this->m_maxBufferIndexX; ++x)
+                {
+                    size_t hash = z * gloablStepSizeZ + y * gloablStepSizeY + x;
+                    float tsdfValue = this->m_globalBuffer[hash];
+                    if (tsdfValue != 0.f)
+                    {
+//                        std::cout << "(" << x << ", " << y << ", " << z << ", " << tsdfValue << ")" << std::endl;
+                        // shift tsdf onto global grid
+                        int global_x = x - centerOfBufferX + center_of_bb_x;
+                        int global_y = y - centerOfBufferY + center_of_bb_y;
+                        int global_z = z - centerOfBufferZ + center_of_bb_z;
+                        VertexT position(global_x, global_y, global_z);
+                        QueryPoint<VertexT> qp = QueryPoint<VertexT>(position, tsdfValue);
+                        this->m_queryPoints[grid_index] = qp;
+                        size_t hash_value = this->hashValue(global_x, global_y, global_z);
+                        this->m_qpIndices[hash_value] = grid_index;
+                        grid_index++;
+                    }
+                }
+            }
+        }
+        this->m_globalIndex = grid_index + 1;
+        for (size_t z = 0; z <= this->m_maxBufferIndexZ; ++z)
+        {
+            for (size_t y = 0; y <= this->m_maxBufferIndexY; ++y)
+            {
+                for (size_t x = 0; x <= this->m_maxBufferIndexX; ++x)
+                {
+                    size_t hash = z * gloablStepSizeZ + y * gloablStepSizeY + x;
+                    float tsdfValue = this->m_globalBuffer[hash];
+                    if (tsdfValue != 0.f)
+                    {
+                        // shift tsdf onto global grid
+                        int global_x = x - centerOfBufferX + center_of_bb_x;
+                        int global_y = y - centerOfBufferY + center_of_bb_y;
+                        int global_z = z - centerOfBufferZ + center_of_bb_z;
+                        addLatticePoint(global_x, global_y, global_z, tsdfValue);
+                    }
+                }
+            }
+        }
+        cout << timestamp << "Finished transforming data" << endl;
 
 #if DEBUG
         exportGlobalTSDFValues();
