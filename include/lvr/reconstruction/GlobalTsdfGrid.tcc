@@ -104,6 +104,18 @@ namespace lvr
     template<typename VertexT, typename BoxT, typename TsdfT>
     bool GlobalTsdfGrid<VertexT, BoxT, TsdfT>::integrateSliceData(TsdfT *tsdf, size_t size)
     {
+#if DEBUG
+        int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
+        int center_of_bb_y = (this->m_boundingBox.getYSize() / 2) / this->m_voxelsize;
+        int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
+
+        std::ofstream file;
+        static char fileName[23];
+        time_t now = time(0);
+        strftime(fileName, sizeof(fileName), "int_%Y%m%d_%H%M%S.3d", localtime(&now));
+        file.open(fileName);
+#endif
+
         cout << timestamp << "Started adding data to global TSDF " << "Values: " << size << endl;
 
         size_t centerOfX = this->m_maxBufferIndexX / 2;
@@ -120,14 +132,45 @@ namespace lvr
             size_t globalY = tsdf[i].y + centerOfY;
             size_t globalZ = tsdf[i].z + centerOfZ;
 
+            // TODO: add out of bounce check
+//            if (globalX > this->m_maxBufferIndexX)
+//            {
+//                std::cout << "globalX is to huge! globalX: " << globalX << ", maxIndex: " << this->m_maxBufferIndexX << std::endl;
+//            }
+//            if (globalY > this->m_maxBufferIndexY)
+//            {
+//                std::cout << "globalY is to huge! globalY: " << globalY << ", maxIndex: " << this->m_maxBufferIndexY << std::endl;
+//            }
+//            if (globalZ > this->m_maxBufferIndexZ)
+//            {
+//                std::cout << "globalZ is to huge! globalZ: " << globalZ << ", maxIndex: " << this->m_maxBufferIndexZ << std::endl;
+//            }
+
             size_t bufferIndex = globalZ * zStepSize + globalY * yStepSize + globalX;
             this->m_globalBuffer[bufferIndex] = tsdf[i].w;
             if (tsdf[i].w != 0.f)
             {
+#if DEBUG
+                file << tsdf[i].x << " " << tsdf[i].y << " " << tsdf[i].z;
+                if (tsdf[i].w > 0.f)
+                {
+                    file << " " << 0 << " " << 0 << " " << 255;
+                }
+                else if (tsdf[i].w < 0.f)
+                {
+                    file << " " << 255 << " " << 0 << " " << 0;
+                }
+                file << std::endl;
+#endif
+
                 this->m_insertedBufferElements++;
             }
         }
         cout << timestamp << "Finished adding data to global TSDF" << endl;
+
+#if DEBUG
+        file.close();
+#endif
 
         return true;
     }
@@ -239,7 +282,6 @@ namespace lvr
         size_t gloablStepSizeY = this->m_maxBufferIndexX + 1;
         size_t gloablStepSizeZ = (this->m_maxBufferIndexY + 1) * gloablStepSizeY;
 
-        //#pragma omp parallllell for
         size_t last_size = this->m_queryPoints.size();
         int grid_index = last_size;
         this->m_queryPoints.resize(this->m_insertedBufferElements + last_size);
