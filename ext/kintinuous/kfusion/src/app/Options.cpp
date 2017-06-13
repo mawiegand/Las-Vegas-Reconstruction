@@ -41,6 +41,9 @@ Options::Options(int argc, char** argv) : m_descr("Supported options")
 			("textures,t", "live texturizing the mesh")
 			("shiftingDistance", value<float>(&m_shifting_distance)->default_value(0.4), " distance in meters of how far the volume is shifted")
 			("cameraOffset", value<float>(&m_cam_offset)->default_value(0.7), "offset of the camera from the volume center in z dimension")
+			("maxBufferIndexX", value<size_t>(&m_maxBufferIndexX)->default_value(1535), "Max Global TSDF Buffer index in X direction")
+			("maxBufferIndexY", value<size_t>(&m_maxBufferIndexY)->default_value(1024), "Max Global TSDF Buffer index in Y direction")
+			("maxBufferIndexZ", value<size_t>(&m_maxBufferIndexZ)->default_value(1535), "Max Global TSDF Buffer index in Z direction")
 			("no_reconstruct,r", "set for no reconstruction, just recording")
 			("optimizePlanes,o", "set for live mesh optimization")
 			("no_vizualisation,v", "set for no live vizualisation, because it reduces gpu performance on really large scale reconstructions")
@@ -196,6 +199,21 @@ int Options::getDepth() const
 float Options::getLineFusionThreshold() const
 {
     return m_variables["lft"].as<float>();
+}
+
+size_t Options::getMaxBufferIndexX() const
+{
+    return m_maxBufferIndexX;
+}
+
+size_t Options::getMaxBufferIndexY() const
+{
+    return m_maxBufferIndexY;
+}
+
+size_t Options::getMaxBufferIndexZ() const
+{
+    return m_maxBufferIndexZ;
 }
 
 Options::~Options() {

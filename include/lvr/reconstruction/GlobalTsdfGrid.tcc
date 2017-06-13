@@ -24,9 +24,9 @@ namespace lvr
             HashGrid<VertexT, BoxT>(cellSize, bb, isVoxelsize),
             options_(options)
     {
-        this->m_maxBufferIndexX = bufferSizeX;
-        this->m_maxBufferIndexY = bufferSizeY;
-        this->m_maxBufferIndexZ = bufferSizeZ;
+        this->m_maxBufferIndexX = this->options_->getMaxBufferIndexX();
+        this->m_maxBufferIndexY = this->options_->getMaxBufferIndexY();
+        this->m_maxBufferIndexZ = this->options_->getMaxBufferIndexZ();
         this->m_globalBufferSize = (this->m_maxBufferIndexX + 1) * (this->m_maxBufferIndexY + 1) * (this->m_maxBufferIndexZ + 1);
         this->m_globalBuffer = new float[this->m_globalBufferSize];
         this->m_insertedBufferElements = 0;
@@ -343,7 +343,7 @@ namespace lvr
                                 options_->getNormalThreshold(),
                                 options_->getMinPlaneSize(),
                                 options_->getSmallRegionThreshold(), false);
-//            MeshPtr tmp_pointer = meshPtr->retesselateInHalfEdge(options_->getLineFusionThreshold(), options_->textures(), texture_counter);
+//        meshPtr->retesselateInHalfEdge(options_->getLineFusionThreshold(), options_->textures(), 0);
 //            if(tmp_pointer == NULL)
 //                return;
         meshPtr->restorePlanes(options_->getMinPlaneSize());

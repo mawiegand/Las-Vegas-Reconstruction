@@ -154,6 +154,20 @@ public:
 	 */
 	float getLineFusionThreshold() const;
 
+    /**
+     * @brief   Max value for global TSDF buffer index in x direction
+     */
+    size_t getMaxBufferIndexX() const;
+
+    /**
+     * @brief   Max value for global TSDF buffer index in y direction
+     */
+    size_t getMaxBufferIndexY() const;
+
+    /**
+     * @brief   Max value for global TSDF buffer index in z direction
+     */
+    size_t getMaxBufferIndexZ() const;
 
 private:
 
@@ -208,6 +222,11 @@ private:
 	/// Name of the classifier object to color the mesh
 	string							m_classifier;
 
+    /// max Buffer index for global tsdf
+    size_t                          m_maxBufferIndexX;
+    size_t                          m_maxBufferIndexY;
+    size_t                          m_maxBufferIndexZ;
+
 };
 
 
@@ -223,6 +242,12 @@ inline ostream& operator<<(ostream& os, const Options &o)
 	cout << "##### Saving mesh to \t\t\t: " << o.getOutput() << endl;
 	cout << "##### Using shifting distance \t\t: " << o.getShiftingDistance() << endl;
 	cout << "##### Using camera offset \t\t: " << o.getCameraOffset() << endl;
+
+    cout << "##### Max GlobalTSDF index (x, y, z)\t: ("
+         << o.getMaxBufferIndexX() << ", "
+         << o.getMaxBufferIndexY() << ", "
+         << o.getMaxBufferIndexZ() << ")"
+         << endl;
 
 	if(o.noVizualisation())
 	{
