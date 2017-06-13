@@ -7,25 +7,22 @@
 
 #include "GlobalTsdfGrid.hpp"
 
-#include <lvr/geometry/ColorVertex.hpp>
 #include <lvr/reconstruction/FastKinFuBox.hpp>
 #include <lvr/reconstruction/FastReconstruction.hpp>
-#include <lvr/geometry/HalfEdgeKinFuMesh.hpp>
 
 #define DEBUG 0
 
 namespace lvr
 {
-    typedef ColorVertex<float, unsigned char> cVertex;
     typedef FastKinFuBox<ColorVertex<float, unsigned char>, lvr::Normal<float> > cFastBox;
     typedef FastReconstruction<ColorVertex<float, unsigned char>, lvr::Normal<float>, cFastBox> cFastReconstruction;
-    typedef HalfEdgeKinFuMesh<cVertex, lvr::Normal<float> > HMesh;
-    typedef HMesh *MeshPtr;
 
     template<typename VertexT, typename BoxT, typename TsdfT>
     GlobalTsdfGrid<VertexT, BoxT, TsdfT>::GlobalTsdfGrid(size_t bufferSizeX, size_t bufferSizeY, size_t bufferSizeZ,
-                                                         float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize) :
-            HashGrid<VertexT, BoxT>(cellSize, bb, isVoxelsize)
+                                                         float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize,
+                                                         kfusion::Options* options) :
+            HashGrid<VertexT, BoxT>(cellSize, bb, isVoxelsize),
+            options_(options)
     {
         this->m_maxBufferIndexX = bufferSizeX;
         this->m_maxBufferIndexY = bufferSizeY;
@@ -329,6 +326,34 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::optimizeMesh(MeshPtr meshPtr)
+    {
+        if (meshPtr == NULL)
+        {
+            return;
+        }
+        cout << timestamp << "Started Mesh Optimization." << endl;
+        meshPtr->fillHoles(options_->getFillHoles());
+        if(options_->getDepth())
+        {
+            meshPtr->setDepth(options_->getDepth());
+        }
+        meshPtr->setClassifier(options_->getClassifier());
+        meshPtr->optimizePlanes(options_->getPlaneIterations(),
+                                options_->getNormalThreshold(),
+                                options_->getMinPlaneSize(),
+                                options_->getSmallRegionThreshold(), false);
+//            MeshPtr tmp_pointer = meshPtr->retesselateInHalfEdge(options_->getLineFusionThreshold(), options_->textures(), texture_counter);
+//            if(tmp_pointer == NULL)
+//                return;
+        meshPtr->restorePlanes(options_->getMinPlaneSize());
+        cout << timestamp << "Finished Mesh Optimization" << endl;
+
+        std::cout << "Global amount of vertices after Optimization: " << meshPtr->meshSize() << std::endl;
+        std::cout << "Global amount of faces after Optimization: " << meshPtr->getFaces().size() << std::endl;
+    }
+
+    template<typename VertexT, typename BoxT, typename TsdfT>
     void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename)
     {
         // wait for writerThread to integrate last slice before starting reconstruction
@@ -348,11 +373,19 @@ namespace lvr
         fast_recon->getMesh(*meshPtr);
         std::cout << "Global amount of vertices: " << meshPtr->meshSize() << std::endl;
         std::cout << "Global amount of faces: " << meshPtr->getFaces().size() << std::endl;
+
+        if (options_->optimizePlanes())
+        {
+            optimizeMesh(meshPtr);
+        }
+
+        cout << timestamp << "Started saving Mesh." << endl;
         meshPtr->finalize();
         ModelPtr m(new Model(meshPtr->meshBuffer()));
 
         // save mesh
         ModelFactory::saveModel(m, filename + ".ply");
+        cout << timestamp << "Finished saving Mesh." << endl;
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>

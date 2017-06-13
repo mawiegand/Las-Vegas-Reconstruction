@@ -13,13 +13,22 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <kfusion/Options.hpp>
+#include <lvr/geometry/ColorVertex.hpp>
+#include <lvr/geometry/HalfEdgeKinFuMesh.hpp>
 
 namespace lvr
 {
+    typedef ColorVertex<float, unsigned char> cVertex;
+    typedef HalfEdgeKinFuMesh<cVertex, lvr::Normal<float> > HMesh;
+    typedef HMesh *MeshPtr;
+
     template<typename VertexT, typename BoxT, typename TsdfT>
     class GlobalTsdfGrid : public HashGrid<VertexT, BoxT>
     {
     private:
+        kfusion::Options *options_;
+
         boost::shared_ptr<boost::thread> m_writerThread;
         boost::shared_ptr<BlockingQueue> m_sliceInQueue;
 
@@ -35,12 +44,14 @@ namespace lvr
         void writeSliceData();
         bool integrateSliceData(TsdfT *tsdf, size_t size);
         void transferBufferToHashGrid();
+        void optimizeMesh(MeshPtr meshPtr);
     public:
         // Typedef to alias iterators for box maps
         typedef typename unordered_map<size_t, BoxT *>::iterator box_map_it;
 
         GlobalTsdfGrid(size_t bufferSizeX, size_t bufferSizeY, size_t bufferSizeZ,
-                       float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize);
+                       float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize,
+                       kfusion::Options* options);
         pair<float*, size_t> getData(BoundingBox<VertexT> bb);
         bool addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift);
         virtual void addLatticePoint(int index_x, int index_y, int index_z, float distance = 0);

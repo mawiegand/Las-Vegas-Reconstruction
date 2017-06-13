@@ -96,7 +96,7 @@ namespace kfusion
 				lvr::BoundingBox<cVertex> bbox_ = lvr::BoundingBox<cVertex>(0.0, 0.0, 0.0, 300.0, 300.0, 300.0);
 				bbox_.expand(300.0, 300.0, 300.0);
 				//timestamp.setQuiet(!options->verbose());
-				global_tsdf_ = new GGrid(2047, 1535, 2047, voxel_size, bbox_, true);
+				global_tsdf_ = new GGrid(2047, 1535, 2047, voxel_size, bbox_, true, params.cmd_options);
 			}
 
 
