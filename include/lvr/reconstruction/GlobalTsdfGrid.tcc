@@ -261,14 +261,8 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename)
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::transferBufferToHashGrid()
     {
-        // wait for writerThread to integrate last slice before starting reconstruction
-        m_writerThread->join();
-
-        //global_tsdf_->saveGrid("global_tsdf.grid");
-
-        // TODO: transform buffer to grid
         cout << timestamp << "Transforming data" << "Values: " << this->m_globalBufferSize << endl;
 
         int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
@@ -295,7 +289,6 @@ namespace lvr
                     float tsdfValue = this->m_globalBuffer[hash];
                     if (tsdfValue != 0.f)
                     {
-//                        std::cout << "(" << x << ", " << y << ", " << z << ", " << tsdfValue << ")" << std::endl;
                         // shift tsdf onto global grid
                         int global_x = x - centerOfBufferX + center_of_bb_x;
                         int global_y = y - centerOfBufferY + center_of_bb_y;
@@ -331,6 +324,19 @@ namespace lvr
             }
         }
         cout << timestamp << "Finished transforming data" << endl;
+        delete[] this->m_globalBuffer;
+        this->m_globalBuffer = NULL;
+    }
+
+    template<typename VertexT, typename BoxT, typename TsdfT>
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename)
+    {
+        // wait for writerThread to integrate last slice before starting reconstruction
+        m_writerThread->join();
+
+        //global_tsdf_->saveGrid("global_tsdf.grid");
+
+        transferBufferToHashGrid();
 
 #if DEBUG
         exportGlobalTSDFValues();
@@ -390,6 +396,9 @@ namespace lvr
     template<typename VertexT, typename BoxT, typename TsdfT>
     GlobalTsdfGrid<VertexT, BoxT, TsdfT>::~GlobalTsdfGrid()
     {
-        delete[] this->m_globalBuffer;
+        if (this->m_globalBuffer != NULL)
+        {
+            delete[] this->m_globalBuffer;
+        }
     }
 }

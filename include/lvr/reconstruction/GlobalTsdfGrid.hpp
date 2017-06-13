@@ -34,6 +34,7 @@ namespace lvr
 
         void writeSliceData();
         bool integrateSliceData(TsdfT *tsdf, size_t size);
+        void transferBufferToHashGrid();
     public:
         // Typedef to alias iterators for box maps
         typedef typename unordered_map<size_t, BoxT *>::iterator box_map_it;
