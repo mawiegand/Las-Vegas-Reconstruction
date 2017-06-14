@@ -229,7 +229,11 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 //                }
 //                integrationCloudFile.close();
 
-                volume->integrateSlice(&buffer_, integrationCloud, min, max, global_shift_);
+                volume->integrateSlice(
+                        &buffer_, integrationCloud,
+                        min, max,
+                        options_->getSliceIntegrationWeight(),
+                        global_shift_);
             }
         }
 	}

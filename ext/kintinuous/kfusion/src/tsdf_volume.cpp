@@ -218,6 +218,7 @@ kfusion::cuda::TsdfVolume::fetchSliceAsCloud (DeviceArray<Point>& cloud_buffer, 
 
 void kfusion::cuda::TsdfVolume::integrateSlice(kfusion::tsdf_buffer* buffer, DeviceArray<float>& data,
                                                const Vec3i minBounds, const Vec3i maxBounds,
+                                               const size_t weight,
                                                const Vec3i globalShift) const
 {
     device::Vec3i dims = device_cast<device::Vec3i>(dims_);
@@ -244,5 +245,5 @@ void kfusion::cuda::TsdfVolume::integrateSlice(kfusion::tsdf_buffer* buffer, Dev
     device::TsdfVolume volume((ushort2*)data_.ptr<ushort2>(), dims, vsz, trunc_dist_, max_weight_);
 
     // TODO: add data to function?!
-    device::integrateSlice(volume, buffer, minBounds_c, maxBounds_c, deviceGlobalShift, deviceData);
+    device::integrateSlice(volume, buffer, minBounds_c, maxBounds_c, weight, deviceGlobalShift, deviceData);
 }

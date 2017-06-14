@@ -169,6 +169,11 @@ public:
      */
     size_t getMaxBufferIndexZ() const;
 
+    /**
+     * @brief   Weight for TSDF-Slice integration
+     */
+    size_t getSliceIntegrationWeight() const;
+
 private:
 
 	string 							m_device ;
@@ -227,6 +232,9 @@ private:
     size_t                          m_maxBufferIndexY;
     size_t                          m_maxBufferIndexZ;
 
+    /// Weight for TSDF-Slice integration
+    size_t                          m_sliceIntegrationWeight;
+
 };
 
 
@@ -248,6 +256,8 @@ inline ostream& operator<<(ostream& os, const Options &o)
          << o.getMaxBufferIndexY() << ", "
          << o.getMaxBufferIndexZ() << ")"
          << endl;
+
+    cout << "##### Using slice integration weight \t: " << o.getSliceIntegrationWeight() << "%" << endl;
 
 	if(o.noVizualisation())
 	{

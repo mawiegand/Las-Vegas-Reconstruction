@@ -196,10 +196,12 @@ namespace kfusion
 
         __global__ void integrate_kernel( const TsdfIntegrator integrator, TsdfVolume volume, tsdf_buffer buffer) { integrator(volume, buffer); };
 
-        __global__ void integrateSliceKernel(TsdfVolume tsdf, tsdf_buffer buffer, int3 minBounds, int3 maxBounds, PtrSz<float> deviceData)
+        __global__ void integrateSliceKernel(TsdfVolume tsdf, tsdf_buffer buffer, int3 minBounds, int3 maxBounds, int weight, PtrSz<float> deviceData)
         {
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+            int tsdfWeight = weight * (tsdf.max_weight / 100.0);
 
 //            /* test sphere */
 //            float radius = 2.f;
@@ -218,8 +220,7 @@ namespace kfusion
 //                                          + (z - 256) * (z - 256) * voxelSize)
 //                                     - radius;
 //                    float tsdfValue = (distance >= -1.f && distance <= 1.f) ? distance : 0.f;
-//                    int weight = tsdf.max_weight;
-//                    gmem::StCs(pack_tsdf(tsdfValue, weight), pos);
+//                    gmem::StCs(pack_tsdf(tsdfValue, tsdfWeight), pos);
 //                }
 //            }
 //            /* test sphere */
@@ -246,10 +247,9 @@ namespace kfusion
 # if __CUDA_ARCH__>=200
 //                    if (tsdfValue != 0.f) printf("TSDF-Value: %f \n", tsdfValue);
 #endif
-                    int weight = tsdf.max_weight;
                     if (tsdfValue != 0.f)
                     {
-                        gmem::StCs(pack_tsdf(tsdfValue, weight), pos);
+                        gmem::StCs(pack_tsdf(tsdfValue, tsdfWeight), pos);
                     }
                 }
             }
@@ -279,8 +279,10 @@ void kfusion::device::integrate(const PtrStepSz<ushort>& dists, TsdfVolume& volu
     cudaSafeCall ( cudaDeviceSynchronize() );
 }
 
-void kfusion::device::integrateSlice(TsdfVolume& volume, tsdf_buffer* buffer, const Vec3i minBounds,
-                                     const Vec3i maxBounds, const Vec3i globalShift, PtrSz<float> deviceData)
+void kfusion::device::integrateSlice(TsdfVolume& volume, tsdf_buffer* buffer,
+                                     const Vec3i minBounds, const Vec3i maxBounds,
+                                     const int weight, const Vec3i globalShift,
+                                     PtrSz<float> deviceData)
 {
     /*dim3 block(32, 8);
     dim3 grid(divUp(volume.dims.x, block.x), divUp(volume.dims.y, block.y));
@@ -292,7 +294,7 @@ void kfusion::device::integrateSlice(TsdfVolume& volume, tsdf_buffer* buffer, co
     grid.x = divUp (buffer->voxels_size.x, block.x);
     grid.y = divUp (buffer->voxels_size.y, block.y);
 
-    integrateSliceKernel<<<grid, block>>>(volume, *buffer, minBounds, maxBounds, deviceData);
+    integrateSliceKernel<<<grid, block>>>(volume, *buffer, minBounds, maxBounds, weight, deviceData);
     cudaSafeCall ( cudaGetLastError () );
     cudaSafeCall ( cudaDeviceSynchronize() );
 }
