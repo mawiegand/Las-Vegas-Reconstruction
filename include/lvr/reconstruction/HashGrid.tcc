@@ -37,6 +37,7 @@
 #include "FastReconstructionTables.hpp"
 #include "SharpBox.hpp"
 #include <lvr/io/Progress.hpp>
+#include <fstream>
 
 namespace lvr
 {

@@ -31,6 +31,7 @@
 #include "FastBox.hpp"
 #include <float.h>
 #include "ExtendedMCTable.hpp"
+#include "PointsetSurface.hpp"
 
 namespace lvr
 {
