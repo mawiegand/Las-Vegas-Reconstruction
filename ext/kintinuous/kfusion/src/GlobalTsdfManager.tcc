@@ -63,5 +63,5 @@ void GlobalTsdfManager<VectorT, TsdfT>::saveMesh(string filename)
 template<typename VectorT, typename TsdfT>
 GlobalTsdfManager<VectorT, TsdfT>::~GlobalTsdfManager()
 {
-
+    delete m_globalTsdfGrid;
 }
