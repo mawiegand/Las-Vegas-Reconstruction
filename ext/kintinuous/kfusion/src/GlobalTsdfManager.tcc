@@ -9,13 +9,13 @@
 
 #define DEBUG 0
 
-template<typename VertexT, typename BoxT, typename TsdfT>
-GlobalTsdfManager<VertexT, BoxT, TsdfT>::GlobalTsdfManager(float cellSize, bool isVoxelsize, kfusion::Options* options) :
+template<typename VectorT, typename TsdfT>
+GlobalTsdfManager<VectorT, TsdfT>::GlobalTsdfManager(float cellSize, bool isVoxelsize, kfusion::Options* options) :
         m_options(options)
 {
     this->m_sliceInQueue = boost::shared_ptr<BlockingQueue>(new BlockingQueue());
     this->m_writerThread = boost::shared_ptr<boost::thread>(new boost::thread(
-            boost::bind(&GlobalTsdfManager<VertexT, BoxT, TsdfT>::writeSliceData, this)
+            boost::bind(&GlobalTsdfManager<VectorT, TsdfT>::writeSliceData, this)
     ));
 
     lvr::BoundingBox<cVertex> bbox_ = lvr::BoundingBox<cVertex>(0.0, 0.0, 0.0, 300.0, 300.0, 300.0);
@@ -24,14 +24,14 @@ GlobalTsdfManager<VertexT, BoxT, TsdfT>::GlobalTsdfManager(float cellSize, bool 
     this->m_globalTsdfGrid = new GGrid(cellSize, bbox_, isVoxelsize, options);
 }
 
-template<typename VertexT, typename BoxT, typename TsdfT>
-bool GlobalTsdfManager<VertexT, BoxT, TsdfT>::addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift)
+template<typename VectorT, typename TsdfT>
+bool GlobalTsdfManager<VectorT, TsdfT>::addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift)
 {
     m_sliceInQueue->Add(pair<pair<TsdfT*, size_t>, bool>(pair<TsdfT*, size_t>(tsdf, size), last_shift));
 }
 
-template<typename VertexT, typename BoxT, typename TsdfT>
-void GlobalTsdfManager<VertexT, BoxT, TsdfT>::writeSliceData()
+template<typename VectorT, typename TsdfT>
+void GlobalTsdfManager<VectorT, TsdfT>::writeSliceData()
 {
     auto slice_work = boost::any_cast<pair<pair<TsdfT*, size_t>, bool> >(m_sliceInQueue->Take());
     pair<TsdfT*, size_t > slice = slice_work.first;
@@ -41,14 +41,18 @@ void GlobalTsdfManager<VertexT, BoxT, TsdfT>::writeSliceData()
     }
 }
 
-template<typename VertexT, typename BoxT, typename TsdfT>
-pair<float*, size_t> GlobalTsdfManager<VertexT, BoxT, TsdfT>::getData(lvr::BoundingBox<VertexT> bb)
+template<typename VectorT, typename TsdfT>
+pair<float*, size_t> GlobalTsdfManager<VectorT, TsdfT>::getData(VectorT minBounds, VectorT maxBounds)
 {
-    return m_globalTsdfGrid->getData(bb);
+    lvr::BoundingBox<cVertex> boundingBox = lvr::BoundingBox<cVertex>(
+            minBounds[0], minBounds[1], minBounds[2],
+            maxBounds[0], maxBounds[1], maxBounds[2]
+    );
+    return m_globalTsdfGrid->getData(boundingBox);
 }
 
-template<typename VertexT, typename BoxT, typename TsdfT>
-void GlobalTsdfManager<VertexT, BoxT, TsdfT>::saveMesh(string filename)
+template<typename VectorT, typename TsdfT>
+void GlobalTsdfManager<VectorT, TsdfT>::saveMesh(string filename)
 {
     // wait for writerThread to integrate last slice before starting reconstruction
     m_writerThread->join();
@@ -56,8 +60,8 @@ void GlobalTsdfManager<VertexT, BoxT, TsdfT>::saveMesh(string filename)
     m_globalTsdfGrid->saveMesh(filename);
 }
 
-template<typename VertexT, typename BoxT, typename TsdfT>
-GlobalTsdfManager<VertexT, BoxT, TsdfT>::~GlobalTsdfManager()
+template<typename VectorT, typename TsdfT>
+GlobalTsdfManager<VectorT, TsdfT>::~GlobalTsdfManager()
 {
 
 }

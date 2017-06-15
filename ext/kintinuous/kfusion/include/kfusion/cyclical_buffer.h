@@ -51,16 +51,11 @@
 #include <cuda_runtime.h>
 #include <thread>
 #include <kfusion/types.hpp>
-#include <lvr/geometry/ColorVertex.hpp>
-#include <lvr/geometry/BoundingBox.hpp>
-#include <lvr/reconstruction/FastKinFuBox.hpp>
 #include <kfusion/GlobalTsdfManager.hpp>
 
 namespace kfusion
 {
-    typedef lvr::ColorVertex<float, unsigned char> cVertex;
-    typedef lvr::FastKinFuBox<lvr::ColorVertex<float, unsigned char>, lvr::Normal<float> > cFastBox;
-    typedef GlobalTsdfManager<cVertex, cFastBox, kfusion::Point> TsdfManager;
+    typedef GlobalTsdfManager<Vec3i, kfusion::Point> TsdfManager;
 
     namespace cuda
     {

@@ -137,9 +137,8 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 //        Vec3i max(330, 330, 330);
         Vec3i min(0, 0, 0);
         Vec3i max(511, 511, 511);
-
-        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2],
-                                                                   max[0] + global_shift_[0], max[1] + global_shift_[1], max[2] + global_shift_[2]);
+        Vec3i intMinBounds(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2]);
+        Vec3i intMaxBounds(max[0] + global_shift_[0], max[1] + global_shift_[1], max[2] + global_shift_[2]);
 
         std::cout << "offset: " << offset << " globalShift: " << global_shift_ << std::endl;
         std::cout << "minBounds: " << minBounds << " maxBounds: " << maxBounds << " diff: " << maxBounds - minBounds << std::endl;
@@ -170,7 +169,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 //        boundingFile.close();
 
         // get data from global tsdf in bounding box
-        std::pair<float*, size_t> data = global_tsdf_manager_->getData(bbox);
+        std::pair<float*, size_t> data = global_tsdf_manager_->getData(intMinBounds, intMaxBounds);
 		if (data.second > 0 )
         {
             // prepare data for integration in device buffer
@@ -239,8 +238,8 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 	}
     if (last_shift)
     {
-        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0, 0, 0, 512, 512, 512);
-
+//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0, 0, 0, 512, 512, 512);
+//
 //        int center_of_bb_x = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
 //        int center_of_bb_y = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
 //        int center_of_bb_z = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.z;

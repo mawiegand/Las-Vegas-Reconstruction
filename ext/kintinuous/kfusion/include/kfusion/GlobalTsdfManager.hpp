@@ -13,13 +13,16 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <lvr/geometry/ColorVertex.hpp>
+#include <lvr/geometry/BoundingBox.hpp>
+#include <lvr/reconstruction/FastKinFuBox.hpp>
 #include <lvr/reconstruction/GlobalTsdfGrid.hpp>
 
 typedef lvr::ColorVertex<float, unsigned char> cVertex;
 typedef lvr::FastKinFuBox<lvr::ColorVertex<float, unsigned char>, lvr::Normal<float> > cFastBox;
 typedef lvr::GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point> GGrid;
 
-template<typename VertexT, typename BoxT, typename TsdfT>
+template<typename VectorT, typename TsdfT>
 class GlobalTsdfManager
 {
 private:
@@ -33,7 +36,7 @@ private:
     void writeSliceData();
 public:
     GlobalTsdfManager(float cellSize, bool isVoxelsize, kfusion::Options* options);
-    pair<float*, size_t> getData(lvr::BoundingBox<VertexT> bb);
+    pair<float*, size_t> getData(VectorT minBounds, VectorT maxBounds);
     bool addSliceToInQueue(TsdfT* tsdf, size_t size, bool last_shift);
     void saveMesh(string filename);
     ~GlobalTsdfManager();
