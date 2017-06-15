@@ -14,6 +14,7 @@ set(KFUSION_SRC
 	src/precomp.cpp
 	src/projective_icp.cpp
 	src/tsdf_volume.cpp
+	src/GlobalTsdfManager.tcc
 	)
 	
 set(KFUSION_CUDA_SRC

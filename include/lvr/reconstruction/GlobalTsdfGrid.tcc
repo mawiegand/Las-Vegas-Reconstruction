@@ -1,5 +1,5 @@
 /**
- * GlobalTsdfGrid.hpp
+ * GlobalTsdfGrid.tcc
  *
  *  @date 27.01.2017
  *  @author Marcel Wiegand <marcel@bluepanel.org>
@@ -18,8 +18,7 @@ namespace lvr
     typedef FastReconstruction<ColorVertex<float, unsigned char>, lvr::Normal<float>, cFastBox> cFastReconstruction;
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    GlobalTsdfGrid<VertexT, BoxT, TsdfT>::GlobalTsdfGrid(size_t bufferSizeX, size_t bufferSizeY, size_t bufferSizeZ,
-                                                         float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize,
+    GlobalTsdfGrid<VertexT, BoxT, TsdfT>::GlobalTsdfGrid(float cellSize, BoundingBox<VertexT> bb, bool isVoxelsize,
                                                          kfusion::Options* options) :
             HashGrid<VertexT, BoxT>(cellSize, bb, isVoxelsize),
             options_(options)
@@ -30,10 +29,6 @@ namespace lvr
         this->m_globalBufferSize = (this->m_maxBufferIndexX + 1) * (this->m_maxBufferIndexY + 1) * (this->m_maxBufferIndexZ + 1);
         this->m_globalBuffer = new float[this->m_globalBufferSize];
         this->m_insertedBufferElements = 0;
-        this->m_sliceInQueue = boost::shared_ptr<BlockingQueue>(new BlockingQueue());
-        this->m_writerThread = boost::shared_ptr<boost::thread>(new boost::thread(
-                boost::bind(&GlobalTsdfGrid<VertexT, BoxT, TsdfT>::writeSliceData, this)
-        ));
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
@@ -80,23 +75,6 @@ namespace lvr
 
         return pair<float*, size_t>(tsdf, tsdfSize);
     }
-
-    template<typename VertexT, typename BoxT, typename TsdfT>
-    bool GlobalTsdfGrid<VertexT, BoxT, TsdfT>::addSliceToInQueue(TsdfT *tsdf, size_t size, bool last_shift)
-    {
-        m_sliceInQueue->Add(pair<pair<TsdfT*, size_t>, bool>(pair<TsdfT*, size_t>(tsdf, size), last_shift));
-    };
-
-    template<typename VertexT, typename BoxT, typename TsdfT>
-    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::writeSliceData()
-    {
-        auto slice_work = boost::any_cast<pair<pair<TsdfT*, size_t>, bool> >(m_sliceInQueue->Take());
-        pair<TsdfT*, size_t > slice = slice_work.first;
-        integrateSliceData(slice.first, slice.second);
-        if (!slice_work.second) {
-            writeSliceData();
-        }
-    };
 
     template<typename VertexT, typename BoxT, typename TsdfT>
     bool GlobalTsdfGrid<VertexT, BoxT, TsdfT>::integrateSliceData(TsdfT *tsdf, size_t size)
@@ -356,9 +334,6 @@ namespace lvr
     template<typename VertexT, typename BoxT, typename TsdfT>
     void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename)
     {
-        // wait for writerThread to integrate last slice before starting reconstruction
-        m_writerThread->join();
-
         //global_tsdf_->saveGrid("global_tsdf.grid");
 
         transferBufferToHashGrid();

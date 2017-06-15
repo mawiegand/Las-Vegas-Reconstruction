@@ -103,7 +103,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 		{
 			std::cout << "####    Performing slice number: " << slice_count_ << " with " << cloud.size() << " TSDF values  ####" << std::endl;
 
-            global_tsdf_->addSliceToInQueue(tsdf_ptr, cloud_slice_.cols, last_shift);
+            global_tsdf_manager_->addSliceToInQueue(tsdf_ptr, cloud_slice_.cols, last_shift);
             std::ofstream sliceFile;
             std::string fileName("slice_" + std::to_string(slice_count_) + ".3d");
             sliceFile.open (fileName);
@@ -145,32 +145,32 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
         std::cout << "minBounds: " << minBounds << " maxBounds: " << maxBounds << " diff: " << maxBounds - minBounds << std::endl;
         std::cout << "min: " << min << " max: " << max << " diff: " << max - min << std::endl;
 
-        int center_of_bb_x = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
-        int center_of_bb_y = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
-        int center_of_bb_z = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.z;
-        std::ofstream boundingFile;
-        std::string fileName("bounding_" + std::to_string(slice_count_) + ".3d");
-        boundingFile.open (fileName);
-
-        int stepSize = 10;
-        for (int z = bbox.getMin().z + center_of_bb_z; z <= bbox.getMax().z + center_of_bb_z; z += stepSize)
-        {
-            for (int y = bbox.getMin().y + center_of_bb_y; y <= bbox.getMax().y + center_of_bb_y; y += stepSize)
-            {
-                for (int x = bbox.getMin().x + center_of_bb_x; x <= bbox.getMax().x + center_of_bb_x; x += stepSize)
-                {
-                    boundingFile << x
-                                 << " " << y
-                                 << " " << z
-                                 << " " << 0 << " " << 255 << " " << 255
-                                 << std::endl;
-                }
-            }
-        }
-        boundingFile.close();
+//        int center_of_bb_x = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
+//        int center_of_bb_y = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
+//        int center_of_bb_z = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.z;
+//        std::ofstream boundingFile;
+//        std::string fileName("bounding_" + std::to_string(slice_count_) + ".3d");
+//        boundingFile.open (fileName);
+//
+//        int stepSize = 10;
+//        for (int z = bbox.getMin().z + center_of_bb_z; z <= bbox.getMax().z + center_of_bb_z; z += stepSize)
+//        {
+//            for (int y = bbox.getMin().y + center_of_bb_y; y <= bbox.getMax().y + center_of_bb_y; y += stepSize)
+//            {
+//                for (int x = bbox.getMin().x + center_of_bb_x; x <= bbox.getMax().x + center_of_bb_x; x += stepSize)
+//                {
+//                    boundingFile << x
+//                                 << " " << y
+//                                 << " " << z
+//                                 << " " << 0 << " " << 255 << " " << 255
+//                                 << std::endl;
+//                }
+//            }
+//        }
+//        boundingFile.close();
 
         // get data from global tsdf in bounding box
-        std::pair<float*, size_t> data = global_tsdf_->getData(bbox);
+        std::pair<float*, size_t> data = global_tsdf_manager_->getData(bbox);
 		if (data.second > 0 )
         {
             // prepare data for integration in device buffer
@@ -241,35 +241,35 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
     {
         lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0, 0, 0, 512, 512, 512);
 
-        int center_of_bb_x = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
-        int center_of_bb_y = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
-        int center_of_bb_z = (global_tsdf_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.z;
+//        int center_of_bb_x = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
+//        int center_of_bb_y = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
+//        int center_of_bb_z = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.z;
+//
+//        static char fileName[26];
+//        time_t now = time(0);
+//        strftime(fileName, sizeof(fileName), "origin_%Y%m%d_%H%M%S.3d", localtime(&now));
+//
+//        std::ofstream originFile;
+//        originFile.open(fileName);
+//
+//        int stepSize = 10;
+//        for (int z = bbox.getMin().z + center_of_bb_z; z <= bbox.getMax().z + center_of_bb_z; z += stepSize)
+//        {
+//            for (int y = bbox.getMin().y + center_of_bb_y; y <= bbox.getMax().y + center_of_bb_y; y += stepSize)
+//            {
+//                for (int x = bbox.getMin().x + center_of_bb_x; x <= bbox.getMax().x + center_of_bb_x; x += stepSize)
+//                {
+//                    originFile << x
+//                               << " " << y
+//                               << " " << z
+//                               << " " << 0 << " " << 255 << " " << 255
+//                               << std::endl;
+//                }
+//            }
+//        }
+//        originFile.close();
 
-        static char fileName[26];
-        time_t now = time(0);
-        strftime(fileName, sizeof(fileName), "origin_%Y%m%d_%H%M%S.3d", localtime(&now));
-
-        std::ofstream originFile;
-        originFile.open(fileName);
-
-        int stepSize = 10;
-        for (int z = bbox.getMin().z + center_of_bb_z; z <= bbox.getMax().z + center_of_bb_z; z += stepSize)
-        {
-            for (int y = bbox.getMin().y + center_of_bb_y; y <= bbox.getMax().y + center_of_bb_y; y += stepSize)
-            {
-                for (int x = bbox.getMin().x + center_of_bb_x; x <= bbox.getMax().x + center_of_bb_x; x += stepSize)
-                {
-                    originFile << x
-                               << " " << y
-                               << " " << z
-                               << " " << 0 << " " << 255 << " " << 255
-                               << std::endl;
-                }
-            }
-        }
-        originFile.close();
-
-        global_tsdf_->saveMesh(options_->getOutput());
+        global_tsdf_manager_->saveMesh(options_->getOutput());
     }
 }
 

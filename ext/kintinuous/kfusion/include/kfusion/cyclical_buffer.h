@@ -54,13 +54,13 @@
 #include <lvr/geometry/ColorVertex.hpp>
 #include <lvr/geometry/BoundingBox.hpp>
 #include <lvr/reconstruction/FastKinFuBox.hpp>
-#include <lvr/reconstruction/GlobalTsdfGrid.hpp>
+#include <kfusion/GlobalTsdfManager.hpp>
 
 namespace kfusion
 {
     typedef lvr::ColorVertex<float, unsigned char> cVertex;
     typedef lvr::FastKinFuBox<lvr::ColorVertex<float, unsigned char>, lvr::Normal<float> > cFastBox;
-    typedef lvr::GlobalTsdfGrid<cVertex, cFastBox, kfusion::Point> GGrid;
+    typedef GlobalTsdfManager<cVertex, cFastBox, kfusion::Point> TsdfManager;
 
     namespace cuda
     {
@@ -93,10 +93,8 @@ namespace kfusion
 
 				//params.cmd_options
 				double voxel_size = (double)(params.volume_size[0] / params.volume_dims[0]);
-				lvr::BoundingBox<cVertex> bbox_ = lvr::BoundingBox<cVertex>(0.0, 0.0, 0.0, 300.0, 300.0, 300.0);
-				bbox_.expand(300.0, 300.0, 300.0);
 				//timestamp.setQuiet(!options->verbose());
-				global_tsdf_ = new GGrid(2047, 1535, 2047, voxel_size, bbox_, true, params.cmd_options);
+				global_tsdf_manager_ = new TsdfManager(voxel_size, true, params.cmd_options);
 			}
 
 
@@ -267,7 +265,7 @@ namespace kfusion
 
 		  //MaCuWrapper mcwrap_;
             Options *options_;
-            GGrid *global_tsdf_;
+            TsdfManager *global_tsdf_manager_;
 
 			inline int calcIndex(float f) const
 			{
