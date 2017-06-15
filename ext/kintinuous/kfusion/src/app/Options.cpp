@@ -31,6 +31,19 @@ namespace kfusion{
 
 Options::Options(int argc, char** argv) : m_descr("Supported options")
 {
+    auto in = [](int min, int max, char const * const opt_name)
+    {
+        return [opt_name, min, max](unsigned short v)
+        {
+            if (v < min || v > max)
+            {
+                throw validation_error(
+                        validation_error::invalid_option_value,
+                        opt_name, std::to_string(v)
+                );
+            }
+        };
+    };
 
 	// Create option descriptions
 
@@ -44,7 +57,7 @@ Options::Options(int argc, char** argv) : m_descr("Supported options")
 			("maxBufferIndexX", value<size_t>(&m_maxBufferIndexX)->default_value(1535), "Max Global TSDF Buffer index in X direction")
 			("maxBufferIndexY", value<size_t>(&m_maxBufferIndexY)->default_value(1024), "Max Global TSDF Buffer index in Y direction")
 			("maxBufferIndexZ", value<size_t>(&m_maxBufferIndexZ)->default_value(1535), "Max Global TSDF Buffer index in Z direction")
-			("sliceIntegrationWeight", value<size_t>(&m_sliceIntegrationWeight)->default_value(100), "Weigth for values of TSDF-Slice integration in percentage")
+			("sliceIntegrationWeight", value<size_t>(&m_sliceIntegrationWeight)->default_value(100)->notifier(in(0, 100, "sliceIntegrationWeight")), "Weight for values of TSDF-Slice integration in percentage")
 			("no_reconstruct,r", "set for no reconstruction, just recording")
 			("optimizePlanes,o", "set for live mesh optimization")
 			("no_vizualisation,v", "set for no live vizualisation, because it reduces gpu performance on really large scale reconstructions")
