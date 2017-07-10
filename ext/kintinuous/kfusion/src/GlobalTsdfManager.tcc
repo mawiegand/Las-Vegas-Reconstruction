@@ -7,7 +7,8 @@
 
 #include <kfusion/GlobalTsdfManager.hpp>
 
-#define DEBUG 0
+#include <chrono>
+#include <iostream>
 
 template<typename VectorT, typename TsdfT>
 GlobalTsdfManager<VectorT, TsdfT>::GlobalTsdfManager(float cellSize, bool isVoxelsize, kfusion::Options* options) :
@@ -35,7 +36,11 @@ void GlobalTsdfManager<VectorT, TsdfT>::writeSliceData()
 {
     auto slice_work = boost::any_cast<pair<pair<TsdfT*, size_t>, bool> >(m_sliceInQueue->Take());
     pair<TsdfT*, size_t > slice = slice_work.first;
+    std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
     this->m_globalTsdfGrid->integrateSliceData(slice.first, slice.second);
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+    std::cout << "~~~~ Finished writeSliceData() after " << duration << " microseconds. ~~~~" << std::endl;
     if (!slice_work.second) {
         writeSliceData();
     }
@@ -48,7 +53,13 @@ pair<float*, size_t> GlobalTsdfManager<VectorT, TsdfT>::getData(VectorT minBound
             minBounds[0], minBounds[1], minBounds[2],
             maxBounds[0], maxBounds[1], maxBounds[2]
     );
-    return m_globalTsdfGrid->getData(boundingBox);
+    std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
+    pair<float*, size_t> data = m_globalTsdfGrid->getData(boundingBox);
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+    std::cout << "~~~~ Finished getData() after " << duration << " microseconds. ~~~~" << std::endl;
+
+    return data;
 }
 
 template<typename VectorT, typename TsdfT>

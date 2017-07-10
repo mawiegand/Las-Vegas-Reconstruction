@@ -39,6 +39,8 @@
 #include <kfusion/cyclical_buffer.h>
 #include <kfusion/precomp.hpp>
 
+#define SLICEDEBUG 0
+
 bool
 kfusion::cuda::CyclicalBuffer::checkForShift (cv::Ptr<cuda::TsdfVolume> volume, const Affine3f &cam_pose, const double distance_camera_target, const bool perform_shift, const bool last_shift, const bool record_mode)
 {
@@ -72,6 +74,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 {
 	//ScopeTime* time = new ScopeTime("Whole Cube shift");
 	// compute new origin and offsets
+	std::chrono::high_resolution_clock::time_point shift_time0 = std::chrono::high_resolution_clock::now();
 	Vec3i offset;
 	Vec3i minBounds;
 	Vec3i maxBounds;
@@ -93,7 +96,11 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 			calcBounds(offset, minBounds, maxBounds);
 		}
 
-		cloud = volume->fetchSliceAsCloud(cloud_buffer_device_, &buffer_, minBounds, maxBounds, global_shift_ );
+        std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
+        cloud = volume->fetchSliceAsCloud(cloud_buffer_device_, &buffer_, minBounds, maxBounds, global_shift_ );
+        std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+        auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+        std::cout << "~~~~ Finished fetchSliceAsCloud() from CyclicalBuffer after " << duration1 << " microseconds. ~~~~" << std::endl;
 
 		cloud_slice_ = cv::Mat(1, (int)cloud.size(), CV_32FC4);
 		cloud.download(cloud_slice_.ptr<Point>());
@@ -104,20 +111,21 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 			std::cout << "####    Performing slice number: " << slice_count_ << " with " << cloud.size() << " TSDF values  ####" << std::endl;
 
             global_tsdf_manager_->addSliceToInQueue(tsdf_ptr, cloud_slice_.cols, last_shift);
-            std::ofstream sliceFile;
-            std::string fileName("slice_" + std::to_string(slice_count_) + ".3d");
-            sliceFile.open (fileName);
-            for (int i = 0; i < cloud.size(); i++)
-            {
-//                std::cout << "extracted: (" << tsdf_ptr->x << ", " << tsdf_ptr->y << ", " << tsdf_ptr->z << ", " << tsdf_ptr->w << ")" << std::endl;
-                sliceFile << tsdf_ptr->x
-                          << " " << tsdf_ptr->y
-                          << " " << tsdf_ptr->z
-                          << " " << 255 << " " << 0 << " " << 0
-                          << std::endl;
-                tsdf_ptr++;
-            }
-            sliceFile.close();
+#if SLICEDEBUG
+             std::ofstream sliceFile;
+             std::string fileName("slice_" + std::to_string(slice_count_) + ".3d");
+             sliceFile.open (fileName);
+             for (int i = 0; i < cloud.size(); i++)
+             {
+                 sliceFile << tsdf_ptr->x
+                           << " " << tsdf_ptr->y
+                           << " " << tsdf_ptr->z
+                           << " " << 255 << " " << 0 << " " << 0
+                           << std::endl;
+                 tsdf_ptr++;
+             }
+             sliceFile.close();
+#endif
             slice_count_++;
 		}
 	}
@@ -130,43 +138,11 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 		// shift buffer addresses
 		shiftOrigin (volume, offset);
 
-        // TODO: integrate existing GlobalTSDFData here
-
         // Calculate bounding box
-//        Vec3i min(280, 280, 280);
-//        Vec3i max(330, 330, 330);
         Vec3i min(0, 0, 0);
         Vec3i max(511, 511, 511);
         Vec3i intMinBounds(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2]);
         Vec3i intMaxBounds(max[0] + global_shift_[0], max[1] + global_shift_[1], max[2] + global_shift_[2]);
-
-        std::cout << "offset: " << offset << " globalShift: " << global_shift_ << std::endl;
-        std::cout << "minBounds: " << minBounds << " maxBounds: " << maxBounds << " diff: " << maxBounds - minBounds << std::endl;
-        std::cout << "min: " << min << " max: " << max << " diff: " << max - min << std::endl;
-
-//        int center_of_bb_x = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
-//        int center_of_bb_y = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
-//        int center_of_bb_z = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.z;
-//        std::ofstream boundingFile;
-//        std::string fileName("bounding_" + std::to_string(slice_count_) + ".3d");
-//        boundingFile.open (fileName);
-//
-//        int stepSize = 10;
-//        for (int z = bbox.getMin().z + center_of_bb_z; z <= bbox.getMax().z + center_of_bb_z; z += stepSize)
-//        {
-//            for (int y = bbox.getMin().y + center_of_bb_y; y <= bbox.getMax().y + center_of_bb_y; y += stepSize)
-//            {
-//                for (int x = bbox.getMin().x + center_of_bb_x; x <= bbox.getMax().x + center_of_bb_x; x += stepSize)
-//                {
-//                    boundingFile << x
-//                                 << " " << y
-//                                 << " " << z
-//                                 << " " << 0 << " " << 255 << " " << 255
-//                                 << std::endl;
-//                }
-//            }
-//        }
-//        boundingFile.close();
 
         // get data from global tsdf in bounding box
         std::pair<float*, size_t> data = global_tsdf_manager_->getData(intMinBounds, intMaxBounds);
@@ -180,96 +156,25 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
             {
                 std::cout << "integrationClout size: " << integrationCloud.size() << std::endl;
 
-//                std::ofstream integrationCloudFile;
-//                std::string fileName("integration_cloud_" + std::to_string(slice_count_) + ".3d");
-//                integrationCloudFile.open(fileName);
-//                integrationCloudFile << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << 0 << std::endl;
-//
-//                int yStepSize = max[0] - min[0] + 1;
-//                int zStepSize = (max[0] - min[1] + 1) * yStepSize;
-//                for(int z = 0; z < 512; ++z)
-//                {
-//                    for(int y = 0; y < 512; ++y)
-//                    {
-//                        for (int x = 0; x < 512; ++x)
-//                        {
-//                            bool inBounds = (
-//                                    (x >= min[0] && x <= max[0]) &&
-//                                    (y >= min[1] && y <= max[1]) &&
-//                                    (z >= min[2] && z <= max[2])
-//                            );
-//
-//                            if (inBounds)
-//                            {
-//                                float distance = data.first[(z - min[2]) * zStepSize + (y - min[1]) * yStepSize + (x - min[0])];
-//                                if (distance >= -1.f && distance <= 1.f && distance != 0.f)
-//                                {
-//                                    integrationCloudFile << x
-//                                                         << " " << y
-//                                                         << " " << z;
-//                                    if (distance >= 0.f && distance <= 1.f)
-//                                    {
-//                                        integrationCloudFile << " " << 255
-//                                                             << " " << 0
-//                                                             << " " << 0
-//                                                             << std::endl;
-//                                    }
-//                                    else if (distance >= -1.f && distance < 0.f)
-//                                    {
-//                                        integrationCloudFile << " " << 0
-//                                                             << " " << 255
-//                                                             << " " << 0
-//                                                             << std::endl;
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//                integrationCloudFile.close();
-
+                std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
                 volume->integrateSlice(
                         &buffer_, integrationCloud,
                         min, max,
                         options_->getSliceIntegrationWeight(),
                         global_shift_);
+                std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
+                auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+                std::cout << "~~~~ Finished integrateSlice() to CyclicalBuffer after " << duration2 << " microseconds. ~~~~" << std::endl;
             }
         }
 	}
     if (last_shift)
     {
-//        lvr::BoundingBox<cVertex> bbox = lvr::BoundingBox<cVertex>(0, 0, 0, 512, 512, 512);
-//
-//        int center_of_bb_x = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.x;
-//        int center_of_bb_y = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.y;
-//        int center_of_bb_z = (global_tsdf_manager_->getBoundingBox().getXSize() / 2) / buffer_.voxels_size.z;
-//
-//        static char fileName[26];
-//        time_t now = time(0);
-//        strftime(fileName, sizeof(fileName), "origin_%Y%m%d_%H%M%S.3d", localtime(&now));
-//
-//        std::ofstream originFile;
-//        originFile.open(fileName);
-//
-//        int stepSize = 10;
-//        for (int z = bbox.getMin().z + center_of_bb_z; z <= bbox.getMax().z + center_of_bb_z; z += stepSize)
-//        {
-//            for (int y = bbox.getMin().y + center_of_bb_y; y <= bbox.getMax().y + center_of_bb_y; y += stepSize)
-//            {
-//                for (int x = bbox.getMin().x + center_of_bb_x; x <= bbox.getMax().x + center_of_bb_x; x += stepSize)
-//                {
-//                    originFile << x
-//                               << " " << y
-//                               << " " << z
-//                               << " " << 0 << " " << 255 << " " << 255
-//                               << std::endl;
-//                }
-//            }
-//        }
-//        originFile.close();
-
         global_tsdf_manager_->saveMesh(options_->getOutput());
     }
+    std::chrono::high_resolution_clock::time_point shift_time1 = std::chrono::high_resolution_clock::now();
+    auto shift_duration = std::chrono::duration_cast<std::chrono::microseconds>(shift_time1 - shift_time0).count();
+    std::cout << "~~~~ Finished shift after " << shift_duration << " microseconds. ~~~~" << std::endl;
 }
 
 void

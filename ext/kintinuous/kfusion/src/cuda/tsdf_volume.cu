@@ -244,9 +244,9 @@ namespace kfusion
                     shift_tsdf_pointer (&pos, buffer);
 
                     float tsdfValue = deviceData.data[(z - minBounds.z) * zStepSize + (y - minBounds.y) * yStepSize + (x - minBounds.x)];
-# if __CUDA_ARCH__>=200
+//#if __CUDA_ARCH__>=200
 //                    if (tsdfValue != 0.f) printf("TSDF-Value: %f \n", tsdfValue);
-#endif
+//#endif
                     if (tsdfValue != 0.f)
                     {
                         gmem::StCs(pack_tsdf(tsdfValue, tsdfWeight), pos);
@@ -880,7 +880,7 @@ namespace kfusion
 					{
 						int W;
 						float F = fetch (buffer, x, y, z, W);
-						if (W != 0 && F != 1.f && F < 0.98 && F != 0.0f && F > -0.98)
+						if (W != 0 && F != 1.f && F < 0.98 /*&& F != 0.0f*/ && F > -0.98)
 						//if (W != 0 && F != 1.f && F < 0.8 && F != 0.0f && F > -0.8)
 						{
 							float4 pt;

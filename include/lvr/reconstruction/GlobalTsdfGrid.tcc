@@ -10,7 +10,7 @@
 #include <lvr/reconstruction/FastKinFuBox.hpp>
 #include <lvr/reconstruction/FastReconstruction.hpp>
 
-#define DEBUG 0
+#define TSDFDEBUG 0
 
 namespace lvr
 {
@@ -53,6 +53,14 @@ namespace lvr
         size_t tsdfSize = abs(bbMax.x - bbMin.x + 1) * abs(bbMax.y - bbMin.y + 1) * abs(bbMax.z - bbMin.z + 1);
         float* tsdf = new float[tsdfSize];
 
+#if TSDFDEBUG
+        std::ofstream file;
+        static char fileName[23];
+        time_t now = time(0);
+        strftime(fileName, sizeof(fileName), "get_%Y%m%d_%H%M%S.3d", localtime(&now));
+        file.open(fileName);
+#endif
+
         cout << timestamp << "Started getting data from global TSDF Values: " << tsdfSize << endl;
 
         size_t globalOffsetX = (centerOfX + bbMin.x);
@@ -69,9 +77,33 @@ namespace lvr
                         &(this->m_globalBuffer[hash]),
                         yStep * sizeof(float)
                 );
+
+#if TSDFDEBUG
+                for (size_t x = (centerOfX + bbMin.x); x <= (centerOfX + bbMax.x); ++x)
+                {
+                    float distance = tsdf[(size_t)((z - centerOfZ - bbMin.z) * zStep + (y - centerOfY - bbMin.y) * yStep + (x - centerOfX - bbMin.x))];
+                    if (distance != 0.f)
+                    {
+                        file << x - centerOfX << " " << y - centerOfY << " " << z - centerOfZ;
+                        if (distance > 0.f)
+                        {
+                            file << " " << 0 << " " << 0 << " " << 255;
+                        }
+                        else if (distance < 0.f)
+                        {
+                            file << " " << 255 << " " << 0 << " " << 0;
+                        }
+                        file << std::endl;
+                    }
+                }
+#endif
             }
         }
         cout << timestamp << "Finished getting data from global TSDF" << endl;
+
+#if TSDFDEBUG
+        file.close();
+#endif
 
         return pair<float*, size_t>(tsdf, tsdfSize);
     }
@@ -79,7 +111,7 @@ namespace lvr
     template<typename VertexT, typename BoxT, typename TsdfT>
     bool GlobalTsdfGrid<VertexT, BoxT, TsdfT>::integrateSliceData(TsdfT *tsdf, size_t size)
     {
-#if DEBUG
+#if TSDFDEBUG
         int center_of_bb_x = (this->m_boundingBox.getXSize() / 2) / this->m_voxelsize;
         int center_of_bb_y = (this->m_boundingBox.getYSize() / 2) / this->m_voxelsize;
         int center_of_bb_z = (this->m_boundingBox.getZSize() / 2) / this->m_voxelsize;
@@ -107,25 +139,22 @@ namespace lvr
             size_t globalY = tsdf[i].y + centerOfY;
             size_t globalZ = tsdf[i].z + centerOfZ;
 
-            // TODO: add out of bounce check
-//            if (globalX > this->m_maxBufferIndexX)
-//            {
-//                std::cout << "globalX is to huge! globalX: " << globalX << ", maxIndex: " << this->m_maxBufferIndexX << std::endl;
-//            }
-//            if (globalY > this->m_maxBufferIndexY)
-//            {
-//                std::cout << "globalY is to huge! globalY: " << globalY << ", maxIndex: " << this->m_maxBufferIndexY << std::endl;
-//            }
-//            if (globalZ > this->m_maxBufferIndexZ)
-//            {
-//                std::cout << "globalZ is to huge! globalZ: " << globalZ << ", maxIndex: " << this->m_maxBufferIndexZ << std::endl;
-//            }
+            if (globalX > this->m_maxBufferIndexX || globalY > this->m_maxBufferIndexY || globalZ > this->m_maxBufferIndexZ)
+            {
+                std::cout << "Value out of buffer index range! Skipping integration of value with ("
+                          << globalX << ", " << globalY << ", " << globalZ << "). Max index is ("
+                          << this->m_maxBufferIndexX << ", " << this->m_maxBufferIndexY << ", "
+                          << this->m_maxBufferIndexZ << ")." << std::endl;
+                continue;
+            }
 
             size_t bufferIndex = globalZ * zStepSize + globalY * yStepSize + globalX;
             this->m_globalBuffer[bufferIndex] = tsdf[i].w;
+
+            this->m_insertedBufferElements++;
             if (tsdf[i].w != 0.f)
             {
-#if DEBUG
+#if TSDFDEBUG
                 file << tsdf[i].x << " " << tsdf[i].y << " " << tsdf[i].z;
                 if (tsdf[i].w > 0.f)
                 {
@@ -137,13 +166,11 @@ namespace lvr
                 }
                 file << std::endl;
 #endif
-
-                this->m_insertedBufferElements++;
             }
         }
         cout << timestamp << "Finished adding data to global TSDF" << endl;
 
-#if DEBUG
+#if TSDFDEBUG
         file.close();
 #endif
 
@@ -338,7 +365,7 @@ namespace lvr
 
         transferBufferToHashGrid();
 
-#if DEBUG
+#if TSDFDEBUG
         exportGlobalTSDFValues();
 #endif
 
