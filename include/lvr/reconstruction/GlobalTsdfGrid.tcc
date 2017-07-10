@@ -359,7 +359,7 @@ namespace lvr
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>
-    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename)
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::saveMesh(string filename, const double camera_target_distance)
     {
         //global_tsdf_->saveGrid("global_tsdf.grid");
 
@@ -373,6 +373,7 @@ namespace lvr
         MeshPtr meshPtr = new HMesh();
         cFastReconstruction *fast_recon = new cFastReconstruction(this);
         fast_recon->getMesh(*meshPtr);
+        transformMeshBack(meshPtr, camera_target_distance);
         std::cout << "Global amount of vertices: " << meshPtr->meshSize() << std::endl;
         std::cout << "Global amount of faces: " << meshPtr->getFaces().size() << std::endl;
 
@@ -388,6 +389,27 @@ namespace lvr
         // save mesh
         ModelFactory::saveModel(m, filename + ".ply");
         cout << timestamp << "Finished saving Mesh." << endl;
+    }
+
+    template<typename VertexT, typename BoxT, typename TsdfT>
+    void GlobalTsdfGrid<VertexT, BoxT, TsdfT>::transformMeshBack(MeshPtr mesh, const double camera_target_distance)
+    {
+        for(auto vert : mesh->getVertices())
+        {
+            // calc in voxel
+            vert->m_position.x *= this->m_voxelsize;
+            vert->m_position.y *= this->m_voxelsize;
+            vert->m_position.z *= this->m_voxelsize;
+            //offset for cube coord to center coord
+            vert->m_position.x -= 1.5;
+            vert->m_position.y -= 1.5;
+            vert->m_position.z -= 1.5 - camera_target_distance;
+
+            //offset for cube coord to center coord
+            vert->m_position.x -= 150;
+            vert->m_position.y -= 150;
+            vert->m_position.z -= 150;
+        }
     }
 
     template<typename VertexT, typename BoxT, typename TsdfT>

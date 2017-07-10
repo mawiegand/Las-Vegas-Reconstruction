@@ -35,6 +35,7 @@ namespace lvr
         float* m_globalBuffer;
 
         void transferBufferToHashGrid();
+        void transformMeshBack(MeshPtr mesh, const double camera_target_distance);
         void optimizeMesh(MeshPtr meshPtr);
     public:
         // Typedef to alias iterators for box maps
@@ -45,7 +46,7 @@ namespace lvr
         pair<float*, size_t> getData(BoundingBox<VertexT> bb);
         bool integrateSliceData(TsdfT *tsdf, size_t size);
         virtual void addLatticePoint(int index_x, int index_y, int index_z, float distance = 0);
-        void saveMesh(string filename);
+        void saveMesh(string filename, const double camera_target_distance);
         void exportGlobalTSDFValues();
         ~GlobalTsdfGrid();
     };

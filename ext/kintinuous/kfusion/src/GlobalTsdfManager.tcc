@@ -11,8 +11,10 @@
 #include <iostream>
 
 template<typename VectorT, typename TsdfT>
-GlobalTsdfManager<VectorT, TsdfT>::GlobalTsdfManager(float cellSize, bool isVoxelsize, kfusion::Options* options) :
-        m_options(options)
+GlobalTsdfManager<VectorT, TsdfT>::GlobalTsdfManager(float cellSize, bool isVoxelsize,
+                                                     kfusion::Options* options,
+                                                     double camera_target_distance) :
+        m_options(options), m_camera_target_distance(camera_target_distance)
 {
     this->m_sliceInQueue = boost::shared_ptr<BlockingQueue>(new BlockingQueue());
     this->m_writerThread = boost::shared_ptr<boost::thread>(new boost::thread(
@@ -68,7 +70,7 @@ void GlobalTsdfManager<VectorT, TsdfT>::saveMesh(string filename)
     // wait for writerThread to integrate last slice before starting reconstruction
     m_writerThread->join();
 
-    m_globalTsdfGrid->saveMesh(filename);
+    m_globalTsdfGrid->saveMesh(filename, this->m_camera_target_distance);
 }
 
 template<typename VectorT, typename TsdfT>

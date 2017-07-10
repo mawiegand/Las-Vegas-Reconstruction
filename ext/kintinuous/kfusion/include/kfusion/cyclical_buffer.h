@@ -89,7 +89,7 @@ namespace kfusion
 				//params.cmd_options
 				double voxel_size = (double)(params.volume_size[0] / params.volume_dims[0]);
 				//timestamp.setQuiet(!options->verbose());
-				global_tsdf_manager_ = new TsdfManager(voxel_size, true, params.cmd_options);
+				global_tsdf_manager_ = new TsdfManager(voxel_size, true, params.cmd_options, params.distance_camera_target);
 			}
 
 

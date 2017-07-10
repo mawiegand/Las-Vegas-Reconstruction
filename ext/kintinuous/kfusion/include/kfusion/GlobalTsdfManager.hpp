@@ -27,6 +27,7 @@ class GlobalTsdfManager
 {
 private:
     kfusion::Options* m_options;
+    const double m_camera_target_distance;
 
     boost::shared_ptr<boost::thread> m_writerThread;
     boost::shared_ptr<BlockingQueue> m_sliceInQueue;
@@ -35,7 +36,7 @@ private:
 
     void writeSliceData();
 public:
-    GlobalTsdfManager(float cellSize, bool isVoxelsize, kfusion::Options* options);
+    GlobalTsdfManager(float cellSize, bool isVoxelsize, kfusion::Options* options, double camera_target_distance);
     pair<float*, size_t> getData(VectorT minBounds, VectorT maxBounds);
     bool addSliceToInQueue(TsdfT* tsdf, size_t size, bool last_shift);
     void saveMesh(string filename);
