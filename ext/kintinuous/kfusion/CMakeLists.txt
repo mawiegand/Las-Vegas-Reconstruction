@@ -6,10 +6,15 @@ set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --ftz=true;--prec-div=false;--prec-sqrt=
 set(KFUSION_SRC 
 	src/capture.cpp
 	src/core.cpp
+	src/FusionStage.cpp
+	src/GridStage.cpp
 	src/cyclical_buffer.cpp
 	src/device_memory.cpp
 	src/imgproc.cpp
+	src/LVRPipeline.cpp
 	src/kinfu.cpp
+	src/MeshStage.cpp
+	src/OptimizeStage.cpp
 	src/PointSave.cpp
 	src/precomp.cpp
 	src/projective_icp.cpp

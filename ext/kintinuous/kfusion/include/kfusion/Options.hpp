@@ -174,6 +174,11 @@ public:
      */
     size_t getSliceIntegrationWeight() const;
 
+	/**
+	 * @brief Returns true if reloaded pipeline is enabled
+	 */
+	bool kinfuReloaded() const;
+
 private:
 
 	string 							m_device ;
@@ -234,6 +239,9 @@ private:
 
     /// Weight for TSDF-Slice integration
     size_t                          m_sliceIntegrationWeight;
+
+	/// Enable KinFu Reloaded
+	bool							m_kinfuReloaded;
 
 };
 
@@ -306,6 +314,10 @@ inline ostream& operator<<(ostream& os, const Options &o)
 	{
 	    cout << "##### Recursion depth \t\t\t: " << o.getDepth() << endl;
 	}
+	if(o.kinfuReloaded())
+		cout << "##### KinFu Reloaded \t\t\t: YES"  << endl;
+	else
+		cout << "##### KinFu Reloaded \t\t\t: NO"  << endl;
 	if(o.verbose())
 	{
 		cout << "##### Verbose output \t\t\t: YES" << endl;

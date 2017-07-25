@@ -52,6 +52,7 @@ Options::Options(int argc, char** argv) : m_descr("Supported options")
 			("device,i", value(&m_device)->default_value("0"), "set RGB-D device or either a path to an oni file")
 			("output,s", value(&m_mesh_name)->default_value("mesh_output"), "filename to save reconstructed mesh (.ply or .obj will be added (obj with textures))")
 			("textures,t", "live texturizing the mesh")
+			("kinfuReloaded,k", "Use reloaded pipeline")
 			("shiftingDistance", value<float>(&m_shifting_distance)->default_value(0.4), " distance in meters of how far the volume is shifted")
 			("cameraOffset", value<float>(&m_cam_offset)->default_value(0.7), "offset of the camera from the volume center in z dimension")
 			("maxBufferIndexX", value<size_t>(&m_maxBufferIndexX)->default_value(1535), "Max Global TSDF Buffer index in X direction")
@@ -165,7 +166,8 @@ bool Options::textures() const
 bool Options::noVizualisation() const
 {
 	return m_variables.count("no_vizualisation") ||
-		   m_variables.count("no_reconstruct");
+		   m_variables.count("no_reconstruct") ||
+		   m_variables.count("kinfuReloaded");
 }
 
 bool Options::noReconstruction() const
@@ -233,6 +235,11 @@ size_t Options::getMaxBufferIndexZ() const
 size_t Options::getSliceIntegrationWeight() const
 {
     return m_sliceIntegrationWeight;
+}
+
+bool Options::kinfuReloaded() const
+{
+	return m_variables.count("kinfuReloaded");
 }
 
 Options::~Options() {

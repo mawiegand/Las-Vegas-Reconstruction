@@ -244,6 +244,5 @@ void kfusion::cuda::TsdfVolume::integrateSlice(kfusion::tsdf_buffer* buffer, Dev
 
     device::TsdfVolume volume((ushort2*)data_.ptr<ushort2>(), dims, vsz, trunc_dist_, max_weight_);
 
-    // TODO: add data to function?!
     device::integrateSlice(volume, buffer, minBounds_c, maxBounds_c, weight, deviceGlobalShift, deviceData);
 }

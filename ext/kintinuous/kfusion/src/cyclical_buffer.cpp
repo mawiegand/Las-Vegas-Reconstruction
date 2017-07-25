@@ -110,22 +110,54 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 		{
 			std::cout << "####    Performing slice number: " << slice_count_ << " with " << cloud.size() << " TSDF values  ####" << std::endl;
 
-            global_tsdf_manager_->addSliceToInQueue(tsdf_ptr, cloud_slice_.cols, last_shift);
+			if (options_->kinfuReloaded())
+			{
+				global_tsdf_manager_->addSliceToInQueue(tsdf_ptr, cloud_slice_.cols, last_shift);
 #if SLICEDEBUG
-             std::ofstream sliceFile;
-             std::string fileName("slice_" + std::to_string(slice_count_) + ".3d");
-             sliceFile.open (fileName);
-             for (int i = 0; i < cloud.size(); i++)
-             {
-                 sliceFile << tsdf_ptr->x
-                           << " " << tsdf_ptr->y
-                           << " " << tsdf_ptr->z
-                           << " " << 255 << " " << 0 << " " << 0
-                           << std::endl;
-                 tsdf_ptr++;
-             }
-             sliceFile.close();
+                std::ofstream sliceFile;
+                std::string fileName("slice_" + std::to_string(slice_count_) + ".3d");
+                sliceFile.open (fileName);
+                for (int i = 0; i < cloud.size(); i++)
+                {
+                    sliceFile << tsdf_ptr->x
+                              << " " << tsdf_ptr->y
+                              << " " << tsdf_ptr->z
+                              << " " << 255 << " " << 0 << " " << 0
+                              << std::endl;
+                    tsdf_ptr++;
+                }
+                sliceFile.close();
 #endif
+			}
+			else
+			{
+				Vec3i fusionShift = global_shift_;
+				Vec3i fusionBackShift = global_shift_;
+				for(int i = 0; i < 3; i++)
+				{
+					if(minBounds[i] == 1 && !last_shift)
+					{
+						fusionShift[i] += maxBounds[i];
+						fusionBackShift[i] += minBounds[i];
+					}
+					else if(last_shift)
+					{
+						fusionShift[i] -= 1000000000;
+						fusionBackShift[i] += maxBounds[i];
+					}
+					else
+					{
+						fusionShift[i] += minBounds[i];
+						fusionBackShift[i] += maxBounds[i];
+					}
+				}
+				TSDFSlice slice;
+				slice.tsdf_values_ = cloud_slice_;
+				slice.offset_ = fusionShift;
+				slice.back_offset_ = fusionBackShift;
+				slice.imgposes_ = imgPoses_;
+				pl_.addTSDFSlice(slice, last_shift);
+			}
             slice_count_++;
 		}
 	}
@@ -138,37 +170,39 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 		// shift buffer addresses
 		shiftOrigin (volume, offset);
 
-        // Calculate bounding box
-        Vec3i min(0, 0, 0);
-        Vec3i max(511, 511, 511);
-        Vec3i intMinBounds(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2]);
-        Vec3i intMaxBounds(max[0] + global_shift_[0], max[1] + global_shift_[1], max[2] + global_shift_[2]);
+		if (options_->kinfuReloaded())
+		{
+			// Calculate bounding box
+			Vec3i min(0, 0, 0);
+			Vec3i max(511, 511, 511);
+			Vec3i intMinBounds(min[0] + global_shift_[0], min[1] + global_shift_[1], min[2] + global_shift_[2]);
+			Vec3i intMaxBounds(max[0] + global_shift_[0], max[1] + global_shift_[1], max[2] + global_shift_[2]);
 
-        // get data from global tsdf in bounding box
-        std::pair<float*, size_t> data = global_tsdf_manager_->getData(intMinBounds, intMaxBounds);
-		if (data.second > 0 )
-        {
-            // prepare data for integration in device buffer
-            DeviceArray<float> integrationCloud(data.second);
-            integrationCloud.upload(data.first, data.second);
+			// get data from global tsdf in bounding box
+			std::pair<float *, size_t> data = global_tsdf_manager_->getData(intMinBounds, intMaxBounds);
+			if (data.second > 0) {
+				// prepare data for integration in device buffer
+				DeviceArray<float> integrationCloud(data.second);
+				integrationCloud.upload(data.first, data.second);
 
-            if(integrationCloud.size() > 0)
-            {
-                std::cout << "integrationClout size: " << integrationCloud.size() << std::endl;
+				if (integrationCloud.size() > 0) {
+					std::cout << "integrationClout size: " << integrationCloud.size() << std::endl;
 
-                std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-                volume->integrateSlice(
-                        &buffer_, integrationCloud,
-                        min, max,
-                        options_->getSliceIntegrationWeight(),
-                        global_shift_);
-                std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
-                auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
-                std::cout << "~~~~ Finished integrateSlice() to CyclicalBuffer after " << duration2 << " microseconds. ~~~~" << std::endl;
-            }
-        }
+					std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+					volume->integrateSlice(
+							&buffer_, integrationCloud,
+							min, max,
+							options_->getSliceIntegrationWeight(),
+							global_shift_);
+					std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
+					auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+					std::cout << "~~~~ Finished integrateSlice() to CyclicalBuffer after " << duration2
+							  << " microseconds. ~~~~" << std::endl;
+				}
+			}
+		}
 	}
-    if (last_shift)
+    else
     {
         global_tsdf_manager_->saveMesh(options_->getOutput());
     }

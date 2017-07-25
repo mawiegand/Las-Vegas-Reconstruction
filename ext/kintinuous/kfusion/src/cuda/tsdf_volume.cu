@@ -284,11 +284,6 @@ void kfusion::device::integrateSlice(TsdfVolume& volume, tsdf_buffer* buffer,
                                      const int weight, const Vec3i globalShift,
                                      PtrSz<float> deviceData)
 {
-    /*dim3 block(32, 8);
-    dim3 grid(divUp(volume.dims.x, block.x), divUp(volume.dims.y, block.y));
-
-    integrateSliceKernel<<<grid, block>>>(volume, buffer);*/
-
     dim3 block (32, 16);
     dim3 grid (1, 1, 1);
     grid.x = divUp (buffer->voxels_size.x, block.x);

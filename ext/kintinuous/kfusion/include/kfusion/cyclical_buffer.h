@@ -47,6 +47,7 @@
 
 #include <kfusion/cuda/tsdf_volume.hpp>
 #include <kfusion/tsdf_buffer.h>
+#include <kfusion/LVRPipeline.hpp>
 #include <Eigen/Core>
 #include <cuda_runtime.h>
 #include <thread>
@@ -72,7 +73,7 @@ namespace kfusion
 			* \param[in] cube_size physical size (in meters) of the volume (here, a cube) represented by the TSDF buffer.
 			* \param[in] nb_voxels_per_axis number of voxels per axis of the volume represented by the TSDF buffer.
 			*/
-			CyclicalBuffer (KinFuParams params): options_(params.cmd_options),
+			CyclicalBuffer (KinFuParams params): pl_(params), options_(params.cmd_options),
 			                optimize_(params.cmd_options->optimizePlanes()), no_reconstruct_(params.cmd_options->noReconstruction())
 			{
 				distance_threshold_ = params.shifting_distance;
@@ -238,6 +239,8 @@ namespace kfusion
 		  void resetMesh(){/*mcwrap_.resetMesh();*/}
 		  void addImgPose(ImgPose* imgPose){ imgPoses_.push_back(imgPose);}
 
+		  MeshPtr getMesh() {return pl_.getMesh();}
+
 		  int getSliceCount(){return slice_count_;}
 
 
@@ -259,6 +262,7 @@ namespace kfusion
 		  tsdf_buffer buffer_;
 
 		  //MaCuWrapper mcwrap_;
+		  LVRPipeline pl_;
             Options *options_;
             TsdfManager *global_tsdf_manager_;
 
