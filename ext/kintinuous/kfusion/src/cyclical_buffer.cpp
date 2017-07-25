@@ -156,7 +156,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 				slice.offset_ = fusionShift;
 				slice.back_offset_ = fusionBackShift;
 				slice.imgposes_ = imgPoses_;
-				pl_.addTSDFSlice(slice, last_shift);
+				pl_->addTSDFSlice(slice, last_shift);
 			}
             slice_count_++;
 		}
@@ -180,12 +180,14 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 
 			// get data from global tsdf in bounding box
 			std::pair<float *, size_t> data = global_tsdf_manager_->getData(intMinBounds, intMaxBounds);
-			if (data.second > 0) {
+			if (data.second > 0)
+            {
 				// prepare data for integration in device buffer
 				DeviceArray<float> integrationCloud(data.second);
 				integrationCloud.upload(data.first, data.second);
 
-				if (integrationCloud.size() > 0) {
+				if (integrationCloud.size() > 0)
+                {
 					std::cout << "integrationClout size: " << integrationCloud.size() << std::endl;
 
 					std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
@@ -202,7 +204,7 @@ kfusion::cuda::CyclicalBuffer::performShift (cv::Ptr<cuda::TsdfVolume> volume, c
 			}
 		}
 	}
-    else
+    if (last_shift && options_->kinfuReloaded())
     {
         global_tsdf_manager_->saveMesh(options_->getOutput());
     }

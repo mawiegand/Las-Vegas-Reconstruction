@@ -73,10 +73,10 @@ namespace kfusion
 			* \param[in] cube_size physical size (in meters) of the volume (here, a cube) represented by the TSDF buffer.
 			* \param[in] nb_voxels_per_axis number of voxels per axis of the volume represented by the TSDF buffer.
 			*/
-			CyclicalBuffer (KinFuParams params): pl_(params), options_(params.cmd_options),
+			CyclicalBuffer (KinFuParams params): options_(params.cmd_options),
 			                optimize_(params.cmd_options->optimizePlanes()), no_reconstruct_(params.cmd_options->noReconstruction())
 			{
-				distance_threshold_ = params.shifting_distance;
+                distance_threshold_ = params.shifting_distance;
 				buffer_.volume_size.x = params.volume_size[0];
 				buffer_.volume_size.y = params.volume_size[1];
 				buffer_.volume_size.z = params.volume_size[2];
@@ -87,10 +87,18 @@ namespace kfusion
 				global_shift_[1] = 0;
 				global_shift_[2] = 0;
 
-				//params.cmd_options
-				double voxel_size = (double)(params.volume_size[0] / params.volume_dims[0]);
-				//timestamp.setQuiet(!options->verbose());
-				global_tsdf_manager_ = new TsdfManager(voxel_size, true, params.cmd_options, params.distance_camera_target);
+
+                if (options_->kinfuReloaded())
+                {
+                    //params.cmd_options
+                    double voxel_size = (double)(params.volume_size[0] / params.volume_dims[0]);
+                    //timestamp.setQuiet(!options->verbose());
+                    global_tsdf_manager_ = new TsdfManager(voxel_size, true, params.cmd_options, params.distance_camera_target);
+                }
+                else
+                {
+                    pl_ = new LVRPipeline(params);
+                }
 			}
 
 
@@ -239,7 +247,7 @@ namespace kfusion
 		  void resetMesh(){/*mcwrap_.resetMesh();*/}
 		  void addImgPose(ImgPose* imgPose){ imgPoses_.push_back(imgPose);}
 
-		  MeshPtr getMesh() {return pl_.getMesh();}
+		  MeshPtr getMesh() {return pl_->getMesh();}
 
 		  int getSliceCount(){return slice_count_;}
 
@@ -262,7 +270,7 @@ namespace kfusion
 		  tsdf_buffer buffer_;
 
 		  //MaCuWrapper mcwrap_;
-		  LVRPipeline pl_;
+		  LVRPipeline *pl_;
             Options *options_;
             TsdfManager *global_tsdf_manager_;
 
